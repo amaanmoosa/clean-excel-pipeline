@@ -810,17 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (term) termLoop();
 
   /* ---------- demo ---------- */
-  const ROWS = [
-    { first: 'jane',  last: 'SMITH',        email: 'JANE.SMITH@GMAIL.COM',  phone: '(415) 555-2671',      dup: false,
-      c: { first: 'Jane',  last: 'Smith',        email: 'jane.smith@gmail.com',  phone: '+14155552671' } },
-    { first: 'bob',   last: "o'neill",      email: 'Bob@Company.com',       phone: '415.555.0198',        dup: false,
-      c: { first: 'Bob',   last: "O'Neill",      email: 'bob@company.com',       phone: '+14155550198' } },
-    { first: 'JANE',  last: 'smith',        email: 'jane.smith@GMAIL.com',  phone: '+1 415 555 2671',     dup: true, c: null },
-    { first: 'MACY',  last: 'mcdonald',     email: 'MACY.MCDONALD@MAIL.IO', phone: '+44 (0)20 7946 0958', dup: false,
-      c: { first: 'Macy',  last: 'McDonald',     email: 'macy.mcdonald@mail.io', phone: '+442079460958' } },
-    { first: 'elena', last: 'GARCIA-LOPEZ', email: 'elena.gl@studio.co',    phone: '1 (212) 555 0148',    dup: false,
-      c: { first: 'Elena', last: 'Garcia-Lopez', email: 'elena.gl@studio.co',    phone: '+12125550148' } },
-  ];
+
   const ROWS = [
   { first: 'Jane', last: 'Smith', email: 'jane.smith@gmail.com', phone: '+14155552671', dup: false },
   { first: 'Bob', last: "O'Neill", email: 'bob@company.com', phone: '+14155550198', dup: false },
