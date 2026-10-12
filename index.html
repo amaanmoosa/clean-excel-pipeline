@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>clean_excel.py — Messy Excel in, polished data out</title>
+<meta name="description" content="A production-grade pandas script that deduplicates emails, capitalizes names, normalizes phones to E.164, and exports a polished Excel workbook." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
+
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" />
+
+<style>
+  :root{
+    --bg:#060907;
+    --panel:#0B100E;
+    --panel-2:#0E1512;
+    --line:rgba(255,255,255,.08);
+    --em:#34D399;
+    --em-deep:#10B981;
+    --amber:#FBBF24;
+    --rose:#FB7185;
+  }
+  html{ scroll-behavior:auto; }
+  body{
+    background:var(--bg);
+    color:#D6DBD6;
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  .font-display{ font-family:'Space Grotesk',sans-serif; }
+  .font-mono, code, pre{ font-family:'JetBrains Mono',monospace !important; }
+  ::selection{ background:rgba(52,211,153,.28); color:#ECFDF5; }
+
+  ::-webkit-scrollbar{ width:10px; }
+  ::-webkit-scrollbar-track{ background:#070A08; }
+  ::-webkit-scrollbar-thumb{ background:#1D2622; border-radius:8px; border:2px solid #070A08; }
+  ::-webkit-scrollbar-thumb:hover{ background:#2A3730; }
+
+  .noise{
+    position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .bg-grid{
+    background-image:
+      linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size:72px 72px;
+  }
+  .fade-mask{ -webkit-mask-image:radial-gradient(ellipse 90% 70% at 50% 0%, black 40%, transparent 100%); mask-image:radial-gradient(ellipse 90% 70% at 50% 0%, black 40%, transparent 100%); }
+  .text-gradient{ background:linear-gradient(100deg,#6EE7B7 0%,#34D399 45%,#0EA5A5 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .outline-text{ -webkit-text-stroke:1px rgba(255,255,255,.12); color:transparent; }
+
+  .ghost{ position:absolute; font-weight:700; color:rgba(255,255,255,.028); line-height:1; pointer-events:none; user-select:none; white-space:nowrap; }
+
+  /* marquee */
+  .marquee{ overflow:hidden; }
+  .marquee-track{ display:flex; align-items:center; width:max-content; animation:marquee 30s linear infinite; }
+  @keyframes marquee{ to{ transform:translateX(-50%); } }
+
+  /* terminal */
+  .term-caret{ display:inline-block; width:8px; height:15px; background:var(--em); vertical-align:-2px; animation:blink 1s steps(1) infinite; }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  /* demo table morphing */
+  .cellfx{ display:inline-block; transition:opacity .18s ease, transform .18s ease, filter .18s ease; }
+  .cell-out{ opacity:0; transform:translateY(7px); filter:blur(5px); }
+  .cell-in{ animation:cellin .34s cubic-bezier(.2,.9,.3,1.2); }
+  @keyframes cellin{ 0%{ opacity:0; transform:translateY(-7px); filter:blur(5px);} 100%{opacity:1; transform:none; filter:none;} }
+  .log-line{ opacity:0; transform:translateY(5px); transition:opacity .3s ease, transform .3s ease; }
+  .log-line.show{ opacity:1; transform:none; }
+
+  .badge{ display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:.04em; padding:3px 9px; border-radius:999px; border:1px solid var(--line); white-space:nowrap; }
+  .badge .dot{ width:5px; height:5px; border-radius:99px; background:currentColor; }
+  .b-pending{ color:rgba(255,255,255,.35); }
+  .b-dup{ color:var(--rose); border-color:rgba(251,113,133,.35); background:rgba(251,113,133,.08); }
+  .b-ok{ color:var(--em); border-color:rgba(52,211,153,.3); background:rgba(52,211,153,.08); }
+
+  /* cards */
+  .card{ background:linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.012)); border:1px solid var(--line); border-radius:18px; transition:border-color .3s ease, transform .35s cubic-bezier(.2,.7,.2,1), background .3s; }
+  .card:hover{ border-color:rgba(52,211,153,.35); transform:translateY(-4px); background:linear-gradient(180deg, rgba(52,211,153,.06), rgba(255,255,255,.015)); }
+
+  /* code window */
+  .codewrap pre{ margin:0 !important; border-radius:0 !important; background:#0A0F0C !important; font-size:12.8px !important; line-height:1.75 !important; padding:22px 26px 26px !important; }
+  .codewrap pre[class*=language-]{ text-shadow:none !important; }
+  .codewrap code{ text-shadow:none !important; }
+  pre.line-numbers{ position:relative; padding-left:3.9em !important; counter-reset:linenumber; }
+  .line-numbers .line-numbers-rows{ border-right:1px solid rgba(255,255,255,.06) !important; font-size:11px !important; top:22px !important; }
+  .line-numbers-rows > span:before{ color:rgba(255,255,255,.22) !important; }
+  .codewrap .token.comment{ color:#5C6B62; font-style:italic; }
+  .codewrap .token.keyword{ color:#6EE7B7; }
+  .codewrap .token.string{ color:#FCD34D; }
+  .codewrap .token.function{ color:#93C5FD; }
+  .codewrap .token.number{ color:#F0ABFC; }
+  .codewrap .token.builtin{ color:#67E8F9; }
+  .codewrap .token.operator{ color:#FDA4AF; background:none; }
+  .codewrap .token.punctuation{ color:#8A968E; }
+
+  .codechip{ font-family:'JetBrains Mono',monospace; font-size:11.5px; background:rgba(52,211,153,.07); border:1px solid rgba(52,211,153,.22); color:#A7F3D0; padding:4px 10px; border-radius:8px; display:inline-block; }
+
+  .btn-primary{ background:var(--em); color:#05281C; transition:transform .25s cubic-bezier(.2,.7,.2,1), box-shadow .25s; box-shadow:0 0 0 0 rgba(52,211,153,.0); }
+  .btn-primary:hover{ transform:translateY(-2px); box-shadow:0 12px 34px -10px rgba(52,211,153,.5); }
+  .btn-ghost{ border:1px solid var(--line); transition:border-color .25s, transform .25s, background .25s; }
+  .btn-ghost:hover{ border-color:rgba(52,211,153,.4); background:rgba(52,211,153,.06); transform:translateY(-2px); }
+
+  .float-slow{ animation:floaty 6s ease-in-out infinite; }
+  .float-slower{ animation:floaty 8s ease-in-out infinite reverse; }
+  @keyframes floaty{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-12px) } }
+
+  .sheet{ box-shadow:0 30px 80px -30px rgba(0,0,0,.8); }
+  .term{ box-shadow:0 40px 100px -30px rgba(0,0,0,.9); }
+
+  details summary::-webkit-details-marker{ display:none; }
+
+  .navlink{ position:relative; }
+  .navlink::after{ content:''; position:absolute; left:0; bottom:-4px; height:1px; width:0; background:var(--em); transition:width .3s ease; }
+  .navlink:hover::after{ width:100%; }
+</style>
+</head>
+
+<body class="bg-grid fade-mask-none">
+<div class="noise"></div>
+
+<!-- ============ NAV ============ -->
+<nav id="nav" class="fixed top-0 inset-x-0 z-50 transition-all duration-500">
+  <div class="max-w-7xl mx-auto px-6 md:px-10 h-[72px] flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-3 group">
+      <span class="w-9 h-9 rounded-xl bg-emerald-400/10 border border-emerald-400/30 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-400 group-hover:text-emerald-950 transition-all duration-300">
+        <i data-lucide="file-spreadsheet" class="w-[18px] h-[18px]"></i>
+      </span>
+      <span class="font-mono text-[13px] tracking-tight text-zinc-300">clean_excel<span class="text-emerald-400">.py</span></span>
+    </a>
+    <div class="hidden md:flex items-center gap-8 font-mono text-[11.5px] tracking-[.14em] uppercase text-zinc-400">
+      <a href="#pipeline" class="navlink hover:text-zinc-100 transition-colors">Pipeline</a>
+      <a href="#demo" class="navlink hover:text-zinc-100 transition-colors">Live Demo</a>
+      <a href="#code" class="navlink hover:text-zinc-100 transition-colors">Script</a>
+      <a href="#edge" class="navlink hover:text-zinc-100 transition-colors">Edge Cases</a>
+    </div>
+    <a href="#code" class="btn-primary hidden sm:inline-flex items-center gap-2 rounded-xl px-4 py-2.5 font-mono text-[11.5px] font-bold uppercase tracking-[.1em]">
+      <i data-lucide="download" class="w-4 h-4"></i> Get the script
+    </a>
+  </div>
+</nav>
+
+<main id="top">
+
+<!-- ============ HERO ============ -->
+<header class="relative min-h-screen flex items-center pt-28 pb-20 overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[600px] rounded-full opacity-25 blur-[130px]" style="background:radial-gradient(closest-side,#10B981,transparent)"></div>
+    <div class="absolute top-1/3 -right-40 w-[500px] h-[500px] rounded-full opacity-15 blur-[120px]" style="background:radial-gradient(closest-side,#FBBF24,transparent)"></div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-6 md:px-10 w-full relative">
+    <div class="grid lg:grid-cols-2 gap-14 lg:gap-8 items-center">
+
+      <!-- left -->
+      <div>
+        <div data-reveal class="inline-flex items-center gap-2.5 rounded-full border border-emerald-400/25 bg-emerald-400/[.06] px-4 py-2 mb-8">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="font-mono text-[10.5px] tracking-[.22em] uppercase text-emerald-300">pandas · openpyxl · phonenumbers</span>
+        </div>
+
+        <h1 class="font-display font-bold tracking-[-0.03em] leading-[0.98] text-[13vw] sm:text-6xl md:text-7xl xl:text-[5.2rem]">
+          <span class="block overflow-hidden"><span class="hero-line block">Messy Excel in.</span></span>
+          <span class="block overflow-hidden"><span class="hero-line block text-gradient pb-2">Polished data out.</span></span>
+        </h1>
+
+        <p data-reveal class="mt-7 text-zinc-400 text-[15.5px] md:text-[17px] leading-relaxed max-w-xl">
+          One production-grade <span class="text-zinc-200 font-medium">pandas</span> script that deduplicates rows
+          by email, title-cases every name — <span class="font-mono text-[13px] text-emerald-300">McDonald</span>,
+          <span class="font-mono text-[13px] text-emerald-300">O'Neill</span> and
+          <span class="font-mono text-[13px] text-emerald-300">Garcia-Lopez</span> included — rewrites phone numbers
+          to the <span class="text-zinc-200 font-medium">E.164 international standard</span>, and exports a styled,
+          boardroom-ready workbook.
+        </p>
+
+        <div data-reveal class="mt-9 flex flex-wrap items-center gap-4">
+          <a href="#code" class="btn-primary inline-flex items-center gap-2.5 rounded-xl px-6 py-3.5 font-mono text-[12.5px] font-bold uppercase tracking-[.1em]">
+            <i data-lucide="braces" class="w-4 h-4"></i> Read the script
+          </a>
+          <a href="#demo" class="btn-ghost inline-flex items-center gap-2.5 rounded-xl px-6 py-3.5 font-mono text-[12.5px] font-bold uppercase tracking-[.1em] text-zinc-200">
+            <i data-lucide="play" class="w-4 h-4 text-emerald-400"></i> See it run
+          </a>
+        </div>
+
+        <div data-reveal class="mt-10 flex flex-wrap gap-x-8 gap-y-3 font-mono text-[11px] tracking-[.14em] uppercase text-zinc-500">
+          <span class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> 3 fixes · 1 pass</span>
+          <span class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> E.164 compliant</span>
+          <span class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> ~150 lines, commented</span>
+        </div>
+      </div>
+
+      <!-- right : artifact -->
+      <div data-reveal class="relative h-[460px] sm:h-[520px] hidden md:block select-none">
+        <!-- back: messy spreadsheet -->
+        <div class="sheet absolute top-4 -left-2 w-[340px] -rotate-6 rounded-2xl overflow-hidden border border-white/10 bg-[#0D120F]">
+          <div class="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-white/[.03]">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-400/70"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400/70"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400/70"></span>
+            <span class="ml-2 font-mono text-[10px] text-zinc-500">messy_data.xlsx</span>
+          </div>
+          <div class="font-mono text-[10px] leading-[1.9]">
+            <div class="grid grid-cols-4 text-zinc-500 border-b border-white/10 bg-white/[.02]">
+              <span class="px-3 py-1.5 border-r border-white/5">FIRST</span><span class="px-3 py-1.5 border-r border-white/5">LAST</span><span class="px-3 py-1.5 border-r border-white/5">EMAIL</span><span class="px-3 py-1.5">PHONE</span>
+            </div>
+            <div class="grid grid-cols-4 border-b border-white/5 text-zinc-400">
+              <span class="px-3 py-1.5 border-r border-white/5 text-amber-300">jane</span><span class="px-3 py-1.5 border-r border-white/5 text-amber-300">SMITH</span><span class="px-3 py-1.5 border-r border-white/5">JANE.SMITH@gm…</span><span class="px-3 py-1.5 text-amber-300">(415) 555-2671</span>
+            </div>
+            <div class="grid grid-cols-4 border-b border-white/5 text-zinc-400">
+              <span class="px-3 py-1.5 border-r border-white/5 text-amber-300">bob</span><span class="px-3 py-1.5 border-r border-white/5 text-amber-300">o'neill</span><span class="px-3 py-1.5 border-r border-white/5">Bob@Company.c…</span><span class="px-3 py-1.5 text-amber-300">415.555.0198</span>
+            </div>
+            <div class="grid grid-cols-4 border-b border-white/5 bg-rose-500/[.08] text-rose-200/80">
+              <span class="px-3 py-1.5 border-r border-white/5">JANE</span><span class="px-3 py-1.5 border-r border-white/5">smith</span><span class="px-3 py-1.5 border-r border-white/5 underline decoration-rose-400/60 decoration-wavy">jane.smith@GMA…</span><span class="px-3 py-1.5">+1 415 555 2671</span>
+            </div>
+            <div class="grid grid-cols-4 text-zinc-400">
+              <span class="px-3 py-1.5 border-r border-white/5 text-amber-300">MACY</span><span class="px-3 py-1.5 border-r border-white/5 text-amber-300">mcdonald</span><span class="px-3 py-1.5 border-r border-white/5">MACY.MCD@mai…</span><span class="px-3 py-1.5 text-amber-300">+44 (0)20 794…</span>
+            </div>
+          </div>
+          <div class="px-4 py-2.5 border-t border-white/10 font-mono text-[9.5px] text-rose-300/80 flex items-center gap-2">
+            <i data-lucide="triangle-alert" class="w-3 h-3"></i> 1 duplicate email · 8 casing errors · 5 non-standard phones
+          </div>
+        </div>
+
+        <!-- front: terminal -->
+        <div class="term absolute right-0 bottom-2 w-[380px] sm:w-[420px] rounded-2xl overflow-hidden border border-white/10 bg-[#0A0F0C]">
+          <div class="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-white/[.03]">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-400/70"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400/70"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400/70"></span>
+            <span class="ml-2 font-mono text-[10px] text-zinc-500 flex items-center gap-1.5"><i data-lucide="terminal" class="w-3 h-3"></i> zsh — cleaning run</span>
+          </div>
+          <div id="terminal" class="px-5 py-4 font-mono text-[12px] leading-[2] min-h-[228px] text-zinc-300 whitespace-pre-wrap"></div>
+        </div>
+
+        <!-- floating chips -->
+        <div class="float-slow absolute -right-1 top-10 badge b-ok py-2! px-3.5! text-[11px]! bg-[#0B100E]">
+          <i data-lucide="phone-call" class="w-3.5 h-3.5"></i> E.164 → +14155552671
+        </div>
+        <div class="float-slower absolute left-8 bottom-24 badge b-dup py-2! px-3.5! text-[11px]! bg-[#0B100E]">
+          <i data-lucide="copy-x" class="w-3.5 h-3.5"></i> 1 duplicate removed
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-zinc-600">
+    <span class="font-mono text-[9.5px] tracking-[.3em] uppercase">scroll</span>
+    <i data-lucide="arrow-down" class="w-4 h-4 animate-bounce"></i>
+  </div>
+</header>
+
+<!-- ============ MARQUEE ============ -->
+<div class="marquee border-y border-white/10 bg-white/[.02] py-4 relative z-10">
+  <div class="marquee-track font-mono text-[11.5px] tracking-[.28em] uppercase text-zinc-400">
+    <span class="flex items-center shrink-0">
+      <span class="mx-8">Remove duplicate emails</span><span class="text-emerald-400">//</span>
+      <span class="mx-8">Capitalize every name</span><span class="text-emerald-400">//</span>
+      <span class="mx-8">Phones → E.164</span><span class="text-emerald-400">//</span>
+      <span class="mx-8">Styled .xlsx export</span><span class="text-emerald-400">//</span>
+      <span class="mx-8">Frozen header</span><span class="text-emerald-400">//</span>
+      <span class="mx-8">Autofilter</span><span class="text-emerald-400">//</span>
+      <span class="mx-8">Banded rows</span><span class="text-emerald-400">//</span>
+    </span>
+    <span class="flex items-center shrink-0" aria-hidden="true">
+      <span class="mx-8">Remove duplicate emails</span><span class="text-emerald-400">//</span>
+      <span class="mx-8">Capitalize every name</span><span class="text-emerald-400">//</span>
+      <span class="mx-8">Phones → E.164</span><span class="text-emerald-400">//</span>
+      <span class="mx-8">Styled .xlsx export</span><span class="text-emerald-400">//</span>
+      <span class="mx-8">Frozen header</span><span class="text-emerald-400">//</span>
+      <span class="mx-8">Autofilter</span><span class="text-emerald-400">//</span>
+      <span class="mx-8">Banded rows</span><span class="text-emerald-400">//</span>
+    </span>
+  </div>
+</div>
+
+<!-- ============ PIPELINE ============ -->
+<section id="pipeline" class="relative py-28 md:py-36 overflow-hidden">
+  <span class="ghost font-display text-[22vw] top-6 -right-10">PIPE</span>
+  <div class="max-w-7xl mx-auto px-6 md:px-10">
+    <div class="flex items-end justify-between flex-wrap gap-6 mb-16">
+      <div>
+        <p data-reveal class="font-mono text-[11px] tracking-[.3em] uppercase text-emerald-400 mb-4">01 — the pipeline</p>
+        <h2 data-reveal class="font-display font-bold tracking-[-0.02em] text-4xl md:text-6xl leading-[1.02]">Five deliberate moves.<br /><span class="text-zinc-500">Zero data left behind.</span></h2>
+      </div>
+      <p data-reveal class="max-w-sm text-zinc-500 text-sm leading-relaxed">Each stage is a pure, testable function. Chain them, reorder them, or drop a stage entirely — the script doesn't care.</p>
+    </div>
+
+    <div data-reveal-group class="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <!-- step 1 -->
+      <div class="card relative p-6 lg:p-5 xl:p-6">
+        <span class="font-mono text-[11px] text-emerald-400/80 tracking-widest">01</span>
+        <div class="mt-4 mb-5 w-10 h-10 rounded-xl bg-emerald-400/10 border border-emerald-400/25 flex items-center justify-center text-emerald-400"><i data-lucide="file-spreadsheet" class="w-[18px] h-[18px]"></i></div>
+        <h3 class="font-display font-semibold text-lg mb-2">Ingest</h3>
+        <p class="text-[12.5px] text-zinc-500 leading-relaxed mb-4">Read every cell as text so leading zeros and raw formats survive the trip into pandas.</p>
+        <span class="codechip">pd.read_excel(path, dtype=str)</span>
+      </div>
+      <!-- step 2 -->
+      <div class="card relative p-6 lg:p-5 xl:p-6">
+        <span class="font-mono text-[11px] text-emerald-400/80 tracking-widest">02</span>
+        <div class="mt-4 mb-5 w-10 h-10 rounded-xl bg-emerald-400/10 border border-emerald-400/25 flex items-center justify-center text-emerald-400"><i data-lucide="copy-x" class="w-[18px] h-[18px]"></i></div>
+        <h3 class="font-display font-semibold text-lg mb-2">Deduplicate</h3>
+        <p class="text-[12.5px] text-zinc-500 leading-relaxed mb-4">Emails get trimmed, lowercased and regex-validated — then the first occurrence wins.</p>
+        <span class="codechip">drop_duplicates(subset="email")</span>
+      </div>
+      <!-- step 3 -->
+      <div class="card relative p-6 lg:p-5 xl:p-6">
+        <span class="font-mono text-[11px] text-emerald-400/80 tracking-widest">03</span>
+        <div class="mt-4 mb-5 w-10 h-10 rounded-xl bg-emerald-400/10 border border-emerald-400/25 flex items-center justify-center text-emerald-400"><i data-lucide="case-sensitive" class="w-[18px] h-[18px]"></i></div>
+        <h3 class="font-display font-semibold text-lg mb-2">Capitalize</h3>
+        <p class="text-[12.5px] text-zinc-500 leading-relaxed mb-4">A separator-aware title-caser rebuilds names token by token — hyphens, apostrophes, the Mc prefix.</p>
+        <span class="codechip">smart_capitalize("o'neill")</span>
+      </div>
+      <!-- step 4 -->
+      <div class="card relative p-6 lg:p-5 xl:p-6">
+        <span class="font-mono text-[11px] text-emerald-400/80 tracking-widest">04</span>
+        <div class="mt-4 mb-5 w-10 h-10 rounded-xl bg-emerald-400/10 border border-emerald-400/25 flex items-center justify-center text-emerald-400"><i data-lucide="phone-call" class="w-[18px] h-[18px]"></i></div>
+        <h3 class="font-display font-semibold text-lg mb-2">Normalize</h3>
+        <p class="text-[12.5px] text-zinc-500 leading-relaxed mb-4">phonenumbers parses, validates and renders E.164. Anything unparseable is blanked for review.</p>
+        <span class="codechip">format_number(n, E164)</span>
+      </div>
+      <!-- step 5 -->
+      <div class="card relative p-6 lg:p-5 xl:p-6">
+        <span class="font-mono text-[11px] text-emerald-400/80 tracking-widest">05</span>
+        <div class="mt-4 mb-5 w-10 h-10 rounded-xl bg-emerald-400/10 border border-emerald-400/25 flex items-center justify-center text-emerald-400"><i data-lucide="sparkles" class="w-[18px] h-[18px]"></i></div>
+        <h3 class="font-display font-semibold text-lg mb-2">Polish</h3>
+        <p class="text-[12.5px] text-zinc-500 leading-relaxed mb-4">openpyxl styles the export: dark header, banded rows, borders, freeze panes, autofilter, fit widths.</p>
+        <span class="codechip">ws.freeze_panes = "A2"</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LIVE DEMO ============ -->
+<section id="demo" class="relative py-28 md:py-36 border-t border-white/5 overflow-hidden">
+  <span class="ghost font-display text-[22vw] top-10 -left-10">RUN</span>
+  <div class="max-w-7xl mx-auto px-6 md:px-10 relative">
+    <div class="mb-14">
+      <p data-reveal class="font-mono text-[11px] tracking-[.3em] uppercase text-emerald-400 mb-4">02 — live demo</p>
+      <h2 data-reveal class="font-display font-bold tracking-[-0.02em] text-4xl md:text-6xl leading-[1.02]">Watch it chew through<br /><span class="text-zinc-500">a real mess.</span></h2>
+    </div>
+
+    <div class="grid lg:grid-cols-5 gap-6">
+      <!-- table -->
+      <div data-reveal class="lg:col-span-3 card !p-0 overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/10 bg-white/[.02]">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-400/70"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400/70"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400/70"></span>
+            <span id="sheetTitle" class="ml-3 font-mono text-[11px] text-zinc-400">messy_data.xlsx</span>
+          </div>
+          <span id="rowCount" class="font-mono text-[10px] text-zinc-500">5 rows</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full font-mono text-[12px]">
+            <thead>
+              <tr class="text-left text-[10px] tracking-[.16em] uppercase text-zinc-500 border-b border-white/10">
+                <th class="px-4 py-3 font-medium w-10">#</th>
+                <th class="px-4 py-3 font-medium">first_name</th>
+                <th class="px-4 py-3 font-medium">last_name</th>
+                <th class="px-4 py-3 font-medium">email</th>
+                <th class="px-4 py-3 font-medium">phone</th>
+                <th class="px-4 py-3 font-medium">status</th>
+              </tr>
+            </thead>
+            <tbody id="demoBody" class="text-zinc-300"></tbody>
+          </table>
+        </div>
+        <div class="px-5 py-3 border-t border-white/10 flex items-center justify-between">
+          <div class="h-1 flex-1 max-w-[220px] rounded-full bg-white/5 overflow-hidden">
+            <div id="progressBar" class="h-full w-0 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300"></div>
+          </div>
+          <span id="progressLabel" class="font-mono text-[10px] text-zinc-500 ml-4">idle — waiting to run</span>
+        </div>
+      </div>
+
+      <!-- sidebar -->
+      <div class="lg:col-span-2 flex flex-col gap-6">
+        <div data-reveal class="card p-6">
+          <button id="runBtn" class="btn-primary w-full inline-flex items-center justify-center gap-2.5 rounded-xl px-6 py-4 font-mono text-[12.5px] font-bold uppercase tracking-[.12em]">
+            <i data-lucide="play" class="w-4 h-4"></i> <span id="runLabel">Run the cleaner</span>
+          </button>
+          <div class="mt-6 grid grid-cols-2 gap-3">
+            <div class="rounded-xl border border-white/10 bg-white/[.02] p-4">
+              <p class="font-mono text-[9.5px] tracking-[.2em] uppercase text-zinc-500 mb-1.5">Rows removed</p>
+              <p class="font-display font-bold text-3xl text-rose-300"><span id="statRemoved">0</span></p>
+            </div>
+            <div class="rounded-xl border border-white/10 bg-white/[.02] p-4">
+              <p class="font-mono text-[9.5px] tracking-[.2em] uppercase text-zinc-500 mb-1.5">Name fields fixed</p>
+              <p class="font-display font-bold text-3xl text-amber-300"><span id="statNames">0</span></p>
+            </div>
+            <div class="rounded-xl border border-white/10 bg-white/[.02] p-4">
+              <p class="font-mono text-[9.5px] tracking-[.2em] uppercase text-zinc-500 mb-1.5">Phones → E.164</p>
+              <p class="font-display font-bold text-3xl text-emerald-300"><span id="statPhones">0</span></p>
+            </div>
+            <div class="rounded-xl border border-white/10 bg-white/[.02] p-4">
+              <p class="font-mono text-[9.5px] tracking-[.2em] uppercase text-zinc-500 mb-1.5">Rows exported</p>
+              <p class="font-display font-bold text-3xl text-zinc-100"><span id="statOut">5</span></p>
+            </div>
+          </div>
+        </div>
+
+        <div data-reveal class="card !p-0 overflow-hidden flex-1">
+          <div class="px-5 py-3 border-b border-white/10 bg-white/[.02] flex items-center gap-2 font-mono text-[10.5px] text-zinc-400">
+            <i data-lucide="terminal" class="w-3.5 h-3.5 text-emerald-400"></i> cleaner.log
+          </div>
+          <div id="demoLog" class="px-5 py-4 font-mono text-[11px] leading-[2.05] text-zinc-400 min-h-[210px]">
+            <p class="text-zinc-600">// press run — the script narrates every move</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CODE ============ -->
+<section id="code" class="relative py-28 md:py-36 border-t border-white/5 overflow-hidden">
+  <span class="ghost font-display text-[20vw] top-8 -right-8">.PY</span>
+  <div class="max-w-6xl mx-auto px-6 md:px-10 relative">
+    <div class="flex items-end justify-between flex-wrap gap-6 mb-12">
+      <div>
+        <p data-reveal class="font-mono text-[11px] tracking-[.3em] uppercase text-emerald-400 mb-4">03 — the script</p>
+        <h2 data-reveal class="font-display font-bold tracking-[-0.02em] text-4xl md:text-6xl leading-[1.02]">All of it.<br /><span class="text-zinc-500">Copy, paste, ship.</span></h2>
+      </div>
+      <div data-reveal class="flex flex-col items-start sm:items-end gap-3">
+        <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[.03] pl-4 pr-2 py-2">
+          <span class="font-mono text-[12px] text-emerald-300">pip install pandas openpyxl phonenumbers</span>
+          <button data-copy="pipInstall" class="copybtn btn-ghost ml-2 rounded-lg p-2 text-zinc-300" aria-label="Copy pip install command">
+            <i data-lucide="copy" class="w-4 h-4 pointer-events-none"></i>
+          </button>
+          <span id="pipInstall" class="hidden">pip install pandas openpyxl phonenumbers</span>
+        </div>
+        <p class="font-mono text-[10.5px] text-zinc-600">python 3.10+ recommended</p>
+      </div>
+    </div>
+
+    <div data-reveal class="codewrap rounded-2xl overflow-hidden border border-white/10 term">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-white/[.03]">
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-400/70"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400/70"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400/70"></span>
+          </div>
+          <span class="font-mono text-[11.5px] text-zinc-300 flex items-center gap-2">
+            <i data-lucide="file-code-2" class="w-3.5 h-3.5 text-emerald-400"></i> clean_excel.py
+          </span>
+          <span class="hidden sm:inline font-mono text-[9.5px] px-2 py-0.5 rounded-full border border-emerald-400/30 text-emerald-300 tracking-widest uppercase">python</span>
+        </div>
+        <button data-copy="scriptSource" class="copybtn btn-ghost inline-flex items-center gap-2 rounded-lg px-3.5 py-2 font-mono text-[10.5px] uppercase tracking-[.12em] text-zinc-300">
+          <i data-lucide="copy" class="w-3.5 h-3.5 pointer-events-none"></i> <span class="pointer-events-none">Copy script</span>
+        </button>
+      </div>
+
+      <pre class="line-numbers"><code id="scriptSource" class="language-python">"""
+clean_excel.py — messy spreadsheet in, polished workbook out
+============================================================
+Fixes three common messes in one pass:
+    1. removes duplicate rows based on email addresses
+    2. capitalizes every name correctly (Smith, O'Neill, McDonald, Garcia-Lopez)
+    3. converts all phone numbers to the international E.164 standard
+... then exports a styled, boardroom-ready Excel file.
+
+Setup:  pip install pandas openpyxl phonenumbers
+Run:    python clean_excel.py
+"""
+
+import re
+
+import pandas as pd
+import phonenumbers
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+
+# ── configuration ────────────────────────────────────────────────────
+INPUT_FILE     = "messy_data.xlsx"
+OUTPUT_FILE    = "cleaned_data.xlsx"
+EMAIL_COLUMN   = "email"
+PHONE_COLUMN   = "phone"
+NAME_COLUMNS   = ("first_name", "last_name")
+DEFAULT_REGION = "US"            # used when a number has no country code
+
+EMAIL_RE = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+
+
+# ── 0 · load ─────────────────────────────────────────────────────────
+def load_sheet(path: str) -> pd.DataFrame:
+    """Read everything as text — leading zeros and raw formats survive."""
+    df = pd.read_excel(path, dtype=str)
+    df.columns = (df.columns
+                    .str.strip()
+                    .str.lower()
+                    .str.replace(r"[^a-z0-9]+", "_", regex=True)
+                    .str.strip("_"))
+    return df
+
+
+# ── 1 · duplicate emails ─────────────────────────────────────────────
+def dedupe_by_email(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize emails, drop blanks + invalids, keep first occurrence."""
+    df = df.copy()
+    df[EMAIL_COLUMN] = df[EMAIL_COLUMN].fillna("").str.strip().str.lower()
+    df = df[df[EMAIL_COLUMN].str.fullmatch(EMAIL_RE)]        # valid only
+    # flip keep to "last" if the newest row should win
+    return df.drop_duplicates(subset=EMAIL_COLUMN, keep="first")
+
+
+# ── 2 · name capitalization ──────────────────────────────────────────
+SEPARATORS = re.compile(r"([\s\-'’]+)")
+
+def smart_capitalize(name):
+    """Title-case a name token by token, preserving its separators.
+
+    SMITH → Smith · o'neill → O'Neill · mcdonald → McDonald
+    garcia-lopez → Garcia-Lopez
+    """
+    if pd.isna(name) or not str(name).strip():
+        return None
+    tokens = SEPARATORS.split(str(name).strip())     # separators are kept
+    for i, tok in enumerate(tokens):
+        if i % 2 or not tok:                         # skip separators
+            continue
+        if tok.lower().startswith("mc") and len(tok) > 2:
+            tokens[i] = "Mc" + tok[2:].capitalize()  # mcdonald → McDonald
+        else:
+            tokens[i] = tok.capitalize()             # GARCIA → Garcia
+    return "".join(tokens)
+
+
+def format_name_columns(df: pd.DataFrame) -> pd.DataFrame:
+    for col in NAME_COLUMNS:
+        if col in df.columns:
+            df[col] = df[col].map(smart_capitalize)
+    return df
+
+
+# ── 3 · phone numbers → E.164 ────────────────────────────────────────
+def to_e164(value, region: str = DEFAULT_REGION):
+    """'(415) 555-2671' → '+14155552671'. Unparseable/invalid → blank."""
+    if pd.isna(value) or not str(value).strip():
+        return None
+    text = re.sub(r"\.0$", "", str(value).strip())   # Excel numeric quirk
+    try:
+        number = phonenumbers.parse(text, region)
+    except phonenumbers.NumberParseException:
+        return None                                  # give up cleanly
+    if not phonenumbers.is_valid_number(number):
+        return None                                  # never guess
+    return phonenumbers.format_number(number, phonenumbers.PhoneNumberFormat.E164)
+
+
+def normalize_phones(df: pd.DataFrame) -> pd.DataFrame:
+    df[PHONE_COLUMN] = df[PHONE_COLUMN].map(to_e164)
+    return df
+
+
+# ── 4 · polished export ──────────────────────────────────────────────
+HEADER_FILL = PatternFill("solid", fgColor="111827")
+BAND_FILL   = PatternFill("solid", fgColor="F3F4F6")
+HEADER_FONT = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+BODY_FONT   = Font(name="Calibri", size=11, color="111827")
+GRID        = Side(style="thin", color="E5E7EB")
+CELL_BORDER = Border(left=GRID, right=GRID, top=GRID, bottom=GRID)
+
+
+def export_polished(df: pd.DataFrame, path: str) -> None:
+    """Write the workbook — then make it look hand-crafted."""
+    out = df.rename(columns=lambda c: c.replace("_", " ").title())
+
+    with pd.ExcelWriter(path, engine="openpyxl") as writer:
+        out.to_excel(writer, index=False, sheet_name="Cleaned Data")
+        ws = writer.sheets["Cleaned Data"]
+
+        for c, col in enumerate(out.columns, start=1):            # header row
+            cell = ws.cell(row=1, column=c)
+            cell.fill, cell.font = HEADER_FILL, HEADER_FONT
+            cell.alignment = Alignment(vertical="center")
+            sample = out[col].dropna().astype(str).head(100)
+            width = max([len(str(col)), *(len(v) for v in sample)]) + 4
+            ws.column_dimensions[get_column_letter(c)].width = min(width, 42)
+
+        for r in range(2, len(out) + 2):                          # body
+            for c in range(1, len(out.columns) + 1):
+                cell = ws.cell(row=r, column=c)
+                cell.font, cell.border = BODY_FONT, CELL_BORDER
+                if r % 2 == 0:                                    # banded rows
+                    cell.fill = BAND_FILL
+
+        ws.row_dimensions[1].height = 24
+        ws.freeze_panes = "A2"                    # header follows the scroll
+        ws.auto_filter.ref = ws.dimensions        # one-click filtering
+        ws.sheet_properties.tabColor = "10B981"
+
+
+# ── run ──────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    print(f"→ loading {INPUT_FILE} …")
+    raw = load_sheet(INPUT_FILE)
+    before = len(raw)
+
+    clean = dedupe_by_email(raw)
+    print(f"✓ email dedupe — {before} → {len(clean)} rows")
+
+    clean = format_name_columns(clean)
+    print(f"✓ name columns — {', '.join(c for c in NAME_COLUMNS if c in clean.columns)}")
+
+    clean = normalize_phones(clean).reset_index(drop=True)
+    valid = clean[PHONE_COLUMN].notna().sum()
+    print(f"✓ phone numbers — {valid} valid · {len(clean) - valid} blanked")
+
+    export_polished(clean, OUTPUT_FILE)
+    print(f"✓ exported — {OUTPUT_FILE} · styled &amp; filtered")</code></pre>
+    </div>
+
+    <!-- configure -->
+    <div data-reveal-group class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-8">
+      <div class="card p-5">
+        <p class="font-mono text-[11px] text-emerald-300 mb-2">INPUT_FILE</p>
+        <p class="text-[12.5px] text-zinc-500 leading-relaxed">Point it at any messy workbook — defaults to <span class="font-mono text-zinc-300">messy_data.xlsx</span>.</p>
+      </div>
+      <div class="card p-5">
+        <p class="font-mono text-[11px] text-emerald-300 mb-2">NAME_COLUMNS</p>
+        <p class="text-[12.5px] text-zinc-500 leading-relaxed">Add or drop columns to capitalize. Works with a single <span class="font-mono text-zinc-300">("name",)</span> column too.</p>
+      </div>
+      <div class="card p-5">
+        <p class="font-mono text-[11px] text-emerald-300 mb-2">DEFAULT_REGION</p>
+        <p class="text-[12.5px] text-zinc-500 leading-relaxed">Fallback ISO region — <span class="font-mono text-zinc-300">"US"</span>, <span class="font-mono text-zinc-300">"GB"</span>, <span class="font-mono text-zinc-300">"DE"</span> — for numbers written without a country code.</p>
+      </div>
+      <div class="card p-5">
+        <p class="font-mono text-[11px] text-emerald-300 mb-2">keep="last"</p>
+        <p class="text-[12.5px] text-zinc-500 leading-relaxed">Flip this in <span class="font-mono text-zinc-300">drop_duplicates</span> if the newest record should survive instead of the first.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EDGE CASES ============ -->
+<section id="edge" class="relative py-28 md:py-36 border-t border-white/5 overflow-hidden">
+  <span class="ghost font-display text-[20vw] bottom-4 -left-12">EDGE</span>
+  <div class="max-w-7xl mx-auto px-6 md:px-10 relative">
+    <div class="mb-14">
+      <p data-reveal class="font-mono text-[11px] tracking-[.3em] uppercase text-emerald-400 mb-4">04 — edge cases</p>
+      <h2 data-reveal class="font-display font-bold tracking-[-0.02em] text-4xl md:text-6xl leading-[1.02]">The details that<br /><span class="text-zinc-500">break lesser scripts.</span></h2>
+    </div>
+
+    <div data-reveal-group class="grid md:grid-cols-2 gap-5">
+      <div class="card p-8">
+        <div class="mb-5 w-11 h-11 rounded-xl bg-emerald-400/10 border border-emerald-400/25 flex items-center justify-center text-emerald-400"><i data-lucide="case-sensitive" class="w-5 h-5"></i></div>
+        <h3 class="font-display font-semibold text-xl mb-3">Names are genuinely hard</h3>
+        <p class="text-[13.5px] text-zinc-400 leading-relaxed mb-5">A naive <span class="font-mono text-[12px] text-zinc-200">str.capitalize()</span> butchers real surnames — O'Neill becomes O'neill. This script splits on spaces, hyphens and apostrophes, re-cases each token, and special-cases the Mc/Mac prefix.</p>
+        <div class="flex flex-wrap gap-2 font-mono text-[11px]">
+          <span class="codechip">mcdonald → McDonald</span>
+          <span class="codechip">o'neill → O'Neill</span>
+          <span class="codechip">garcia-lopez → Garcia-Lopez</span>
+        </div>
+      </div>
+      <div class="card p-8">
+        <div class="mb-5 w-11 h-11 rounded-xl bg-emerald-400/10 border border-emerald-400/25 flex items-center justify-center text-emerald-400"><i data-lucide="hash" class="w-5 h-5"></i></div>
+        <h3 class="font-display font-semibold text-xl mb-3">Leading zeros die in Excel</h3>
+        <p class="text-[13.5px] text-zinc-400 leading-relaxed mb-5">A phone like <span class="font-mono text-[12px] text-zinc-200">0044 20…</span> silently becomes <span class="font-mono text-[12px] text-zinc-200">4420.0</span> the moment Excel types it as a number. Reading with <span class="font-mono text-[12px] text-emerald-300">dtype=str</span> keeps raw values intact, and a defensive <span class="font-mono text-[12px] text-emerald-300">.0</span> strip handles numeric cells.</p>
+        <div class="flex flex-wrap gap-2 font-mono text-[11px]">
+          <span class="codechip">dtype=str</span>
+          <span class="codechip">re.sub(r"\.0$", "", text)</span>
+        </div>
+      </div>
+      <div class="card p-8">
+        <div class="mb-5 w-11 h-11 rounded-xl bg-emerald-400/10 border border-emerald-400/25 flex items-center justify-center text-emerald-400"><i data-lucide="globe" class="w-5 h-5"></i></div>
+        <h3 class="font-display font-semibold text-xl mb-3">E.164 is a strict contract</h3>
+        <p class="text-[13.5px] text-zinc-400 leading-relaxed mb-5">One <span class="font-mono text-[12px] text-zinc-200">+</span> followed by up to 15 digits — no spaces, no brackets, no excuses. The script validates against the same rules as Google's libphonenumber; anything that fails is blanked so bad data can't leak downstream.</p>
+        <div class="flex flex-wrap gap-2 font-mono text-[11px]">
+          <span class="codechip">(415) 555-2671 → +14155552671</span>
+          <span class="codechip">+44 (0)20 7946 → +44207946</span>
+        </div>
+      </div>
+      <div class="card p-8">
+        <div class="mb-5 w-11 h-11 rounded-xl bg-emerald-400/10 border border-emerald-400/25 flex items-center justify-center text-emerald-400"><i data-lucide="paintbrush" class="w-5 h-5"></i></div>
+        <h3 class="font-display font-semibold text-xl mb-3">Polish is part of the job</h3>
+        <p class="text-[13.5px] text-zinc-400 leading-relaxed mb-5">The export isn't a raw dump. Dark styled header, banded rows, thin grid borders, frozen top row, column autofilter, auto-fit widths and a colored sheet tab — ready to attach and send without a second look.</p>
+        <div class="flex flex-wrap gap-2 font-mono text-[11px]">
+          <span class="codechip">ws.auto_filter.ref</span>
+          <span class="codechip">freeze_panes + tabColor</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="relative border-t border-white/10 pt-20 pb-10 overflow-hidden">
+  <div class="max-w-7xl mx-auto px-6 md:px-10">
+    <h2 class="font-display font-bold tracking-[-0.03em] leading-none text-[16vw] md:text-[9rem] outline-text select-none text-center">CLEAN DATA OUT</h2>
+    <div class="mt-14 flex flex-col md:flex-row items-center justify-between gap-6 border-t border-white/10 pt-8">
+      <div class="flex items-center gap-3">
+        <span class="w-8 h-8 rounded-lg bg-emerald-400/10 border border-emerald-400/30 flex items-center justify-center text-emerald-400"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i></span>
+        <span class="font-mono text-[12px] text-zinc-400">clean_excel<span class="text-emerald-400">.py</span></span>
+      </div>
+      <p class="font-mono text-[10.5px] tracking-[.2em] uppercase text-zinc-600">pandas · openpyxl · phonenumbers · libphonenumber</p>
+      <a href="#top" class="btn-ghost inline-flex items-center gap-2 rounded-xl px-4 py-2.5 font-mono text-[11px] uppercase tracking-[.12em] text-zinc-300">
+        <i data-lucide="arrow-up" class="w-3.5 h-3.5 text-emerald-400"></i> back to top
+      </a>
+    </div>
+  </div>
+</footer>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  gsap.registerPlugin(ScrollTrigger);
+
+  /* ---------- smooth scroll ---------- */
+  let lenis = null;
+  if (!reduced && window.Lenis) {
+    lenis = new Lenis({ duration: 1.15, smoothWheel: true });
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add(t => lenis.raf(t * 1000));
+    gsap.ticker.lagSmoothing(0);
+  }
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const el = document.querySelector(a.getAttribute('href'));
+      if (!el) return;
+      e.preventDefault();
+      if (lenis) lenis.scrollTo(el, { offset: -70 });
+      else el.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+
+  /* ---------- nav shade ---------- */
+  const nav = document.getElementById('nav');
+  const shade = () => {
+    const on = window.scrollY > 30;
+    nav.style.background = on ? 'rgba(6,9,7,.75)' : 'transparent';
+    nav.style.backdropFilter = on ? 'blur(14px)' : 'none';
+    nav.style.borderBottom = on ? '1px solid rgba(255,255,255,.07)' : '1px solid transparent';
+  };
+  window.addEventListener('scroll', shade, { passive: true }); shade();
+
+  /* ---------- reveals ---------- */
+  gsap.fromTo('.hero-line', { yPercent: 110 }, { yPercent: 0, duration: 1.1, stagger: .12, ease: 'power4.out', delay: .15 });
+  gsap.utils.toArray('[data-reveal]').forEach((el, i) => {
+    gsap.fromTo(el, { opacity: 0, y: 34 }, {
+      opacity: 1, y: 0, duration: .9, ease: 'power3.out',
+      delay: (i % 4) * .06,
+      scrollTrigger: { trigger: el, start: 'top 88%' }
+    });
+  });
+  gsap.utils.toArray('[data-reveal-group]').forEach(group => {
+    gsap.fromTo(group.children, { opacity: 0, y: 30 }, {
+      opacity: 1, y: 0, duration: .8, stagger: .09, ease: 'power3.out',
+      scrollTrigger: { trigger: group, start: 'top 85%' }
+    });
+  });
+
+  /* ---------- hero terminal ---------- */
+  const term = document.getElementById('terminal');
+  const T_LINES = [
+    { t: '→ loading messy_data.xlsx …', c: '#9CA3AF' },
+    { t: '✓ email dedupe — 5 → 4 rows', c: '#34D399' },
+    { t: "✓ name columns — first_name, last_name", c: '#34D399' },
+    { t: '✓ phone numbers — 4 valid · 0 blanked', c: '#34D399' },
+    { t: '✓ exported — cleaned_data.xlsx · styled & filtered', c: '#6EE7B7' },
+  ];
+  const CMD = '$ python clean_excel.py';
+  async function termLoop(){
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    while (true) {
+      term.innerHTML = '';
+      const cmdLine = document.createElement('div');
+      term.appendChild(cmdLine);
+      cmdLine.innerHTML = '<span class="term-caret"></span>';
+      for (let i = 0; i <= CMD.length; i++) {
+        cmdLine.innerHTML = '<span style="color:#E5E7EB">' + CMD.slice(0, i) + '</span><span class="term-caret"></span>';
+        await wait(46 + Math.random() * 40);
+      }
+      await wait(500);
+      for (const l of T_LINES) {
+        const d = document.createElement('div');
+        d.style.color = l.c; d.style.opacity = '0'; d.style.transform = 'translateY(4px)';
+        d.style.transition = 'all .35s ease';
+        d.textContent = l.t;
+        term.appendChild(d);
+        requestAnimationFrame(() => requestAnimationFrame(() => { d.style.opacity = '1'; d.style.transform = 'none'; }));
+        await wait(330);
+      }
+      const done = document.createElement('div');
+      done.innerHTML = '<span class="term-caret"></span>';
+      term.appendChild(done);
+      await wait(3600);
+    }
+  }
+  if (term) termLoop();
+
+  /* ---------- demo ---------- */
+  const ROWS = [
+    { first: 'jane',  last: 'SMITH',        email: 'JANE.SMITH@GMAIL.COM',  phone: '(415) 555-2671',      dup: false,
+      c: { first: 'Jane',  last: 'Smith',        email: 'jane.smith@gmail.com',  phone: '+14155552671' } },
+    { first: 'bob',   last: "o'neill",      email: 'Bob@Company.com',       phone: '415.555.0198',        dup: false,
+      c: { first: 'Bob',   last: "O'Neill",      email: 'bob@company.com',       phone: '+14155550198' } },
+    { first: 'JANE',  last: 'smith',        email: 'jane.smith@GMAIL.com',  phone: '+1 415 555 2671',     dup: true, c: null },
+    { first: 'MACY',  last: 'mcdonald',     email: 'MACY.MCDONALD@MAIL.IO', phone: '+44 (0)20 7946 0958', dup: false,
+      c: { first: 'Macy',  last: 'McDonald',     email: 'macy.mcdonald@mail.io', phone: '+442079460958' } },
+    { first: 'elena', last: 'GARCIA-LOPEZ', email: 'elena.gl@studio.co',    phone: '1 (212) 555 0148',    dup: false,
+      c: { first: 'Elena', last: 'Garcia-Lopez', email: 'elena.gl@studio.co',    phone: '+12125550148' } },
+  ];
+  const tbody = document.getElementById('demoBody');
+  const logEl = document.getElementById('demoLog');
+  const runBtn = document.getElementById('runBtn');
+  const runLabel = document.getElementById('runLabel');
+  const rowCount = document.getElementById('rowCount');
+  const sheetTitle = document.getElementById('sheetTitle');
+  const bar = document.getElementById('progressBar');
+  const barLabel = document.getElementById('progressLabel');
+  let runToken = 0, running = false, doneState = false;
+
+  const pending = '<span class="badge b-pending"><span class="dot"></span>pending</span>';
+  function renderTable() {
+    tbody.innerHTML = ROWS.map((r, i) => `
+      <tr data-i="${i}" class="border-b border-white/5 transition-colors duration-300">
+        <td class="px-4 py-3 text-zinc-600">${i + 1}</td>
+        <td class="px-4 py-3"><span class="cellfx" data-f="first">${r.first}</span></td>
+        <td class="px-4 py-3"><span class="cellfx" data-f="last">${r.last}</span></td>
+        <td class="px-4 py-3 text-zinc-400"><span class="cellfx" data-f="email">${r.email}</span></td>
+        <td class="px-4 py-3 text-amber-200/90"><span class="cellfx" data-f="phone">${r.phone}</span></td>
+        <td class="px-4 py-3" data-badge>${pending}</td>
+      </tr>`).join('');
+    rowCount.textContent = ROWS.length + ' rows';
+  }
+  renderTable();
+
+  function log(text, color) {
+    const p = document.createElement('p');
+    p.className = 'log-line';
+    if (color) p.style.color = color;
+    p.textContent = text;
+    logEl.appendChild(p);
+    requestAnimationFrame(() => p.classList.add('show'));
+  }
+  function morph(el, value, color) {
+    el.classList.add('cell-out');
+    setTimeout(() => {
+      el.textContent = value;
+      if (color) el.parentElement.style.color = color;
+      el.classList.remove('cell-out');
+      el.classList.add('cell-in');
+      setTimeout(() => el.classList.remove('cell-in'), 380);
+    }, 190);
+  }
+  function tweenStat(id, to, delay) {
+    const el = document.getElementById(id);
+    const obj = { v: parseInt(el.textContent) || 0 };
+    gsap.to(obj, { v: to, duration: 1.1, delay: delay || 0, ease: 'power2.out', onUpdate: () => el.textContent = Math.round(obj.v) });
+  }
+  function resetDemo() {
+    runToken++; running = false; doneState = false;
+    renderTable();
+    logEl.innerHTML = '<p class="text-zinc-600">// press run — the script narrates every move</p>';
+    gsap.set(bar, { width: 0 });
+    barLabel.textContent = 'idle — waiting to run';
+    sheetTitle.textContent = 'messy_data.xlsx';
+    ['statRemoved','statNames','statPhones'].forEach(id => document.getElementById(id).textContent = '0');
+    document.getElementById('statOut').textContent = '5';
+    runLabel.textContent = 'Run the cleaner';
+    runBtn.classList.remove('btn-ghost');
+    if (!runBtn.classList.contains('btn-primary')) runBtn.classList.add('btn-primary');
+  }
+
+  async function runDemo() {
+    const token = ++runToken;
+    running = true;
+    const alive = () => token === runToken;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    runLabel.textContent = 'Running…';
+    logEl.innerHTML = '';
+    gsap.fromTo(bar, { width: 0 }, { width: '100%', duration: 4.6, ease: 'power1.inOut' });
+
+    log('→ loading messy_data.xlsx … 5 rows found', '#9CA3AF');
+    barLabel.textContent = 'scanning rows…';
+    await wait(650); if (!alive()) return;
+
+    // duplicate
+    const dupTr = tbody.querySelector('tr[data-i="2"]');
+    dupTr.style.background = 'rgba(251,113,133,.10)';
+    dupTr.querySelector('[data-badge]').innerHTML = '<span class="badge b-dup"><span class="dot"></span>duplicate email</span>';
+    log('! row 3 — duplicate email jane.smith@gmail.com', '#FB7185');
+    await wait(800); if (!alive()) return;
+    await gsap.to(dupTr, { opacity: 0, x: 40, duration: .45, ease: 'power2.in' }).then();
+    if (!alive()) return;
+    dupTr.remove();
+    rowCount.textContent = '4 rows';
+    log('✓ emails normalized + deduplicated — 4 rows remain', '#34D399');
+    tweenStat('statRemoved', 1);
+    barLabel.textContent = 'deduplicating…';
+    await wait(500); if (!alive()) return;
+
+    // names
+    const kept = [...tbody.querySelectorAll('tr')];
+    for (const tr of kept) {
+      const i = +tr.dataset.i, c = ROWS[i].c;
+      if (!c) continue;
+      morph(tr.querySelector('[data-f="first"]'), c.first, '#D6DBD6');
+      await wait(90); if (!alive()) return;
+      morph(tr.querySelector('[data-f="last"]'), c.last, '#D6DBD6');
+      await wait(90); if (!alive()) return;
+    }
+    tweenStat('statNames', 10);
+    log("✓ capitalized first_name, last_name — 10 fields", '#FBBF24');
+    barLabel.textContent = 'capitalizing names…';
+    await wait(420); if (!alive()) return;
+
+    // emails
+    for (const tr of kept) {
+      const i = +tr.dataset.i, c = ROWS[i].c;
+      if (!c) continue;
+      morph(tr.querySelector('[data-f="email"]'), c.email, '#9CA3AF');
+      await wait(90); if (!alive()) return;
+    }
+    await wait(300); if (!alive()) return;
+
+    // phones
+    for (const tr of kept) {
+      const i = +tr.dataset.i, c = ROWS[i].c;
+      if (!c) continue;
+      morph(tr.querySelector('[data-f="phone"]'), c.phone, '#6EE7B7');
+      await wait(110); if (!alive()) return;
+    }
+    tweenStat('statPhones', 5);
+    log('✓ parsed 5/5 numbers — rewritten to E.164', '#34D399');
+    barLabel.textContent = 'normalizing phones…';
+    await wait(500); if (!alive()) return;
+
+    // badges + outro
+    kept.forEach(tr => {
+      if (!document.contains(tr)) return;
+      tr.querySelector('[data-badge]').innerHTML = '<span class="badge b-ok"><span class="dot"></span>kept · normalized</span>';
+    });
+    log('→ export_polished() — header · banded rows · autofilter', '#9CA3AF');
+    await wait(600); if (!alive()) return;
+    sheetTitle.textContent = 'cleaned_data.xlsx';
+    tweenStat('statOut', 4);
+    log('✓ cleaned_data.xlsx written — 4 rows, styled & filtered', '#6EE7B7');
+    barLabel.textContent = 'done — 5 messy rows became 4 clean ones';
+
+    running = false; doneState = true;
+    runLabel.textContent = 'Reset the mess';
+    runBtn.classList.remove('btn-primary'); runBtn.classList.add('btn-ghost');
+  }
+
+  runBtn.addEventListener('click', () => {
+    if (running) return;
+    if (doneState) resetDemo();
+    else runDemo();
+  });
+
+  /* ---------- copy buttons ---------- */
+  document.querySelectorAll('.copybtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const src = document.getElementById(btn.dataset.copy);
+      const text = src.tagName === 'CODE' ? src.innerText : src.textContent;
+      try { await navigator.clipboard.writeText(text); }
+      catch (e) {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); ta.remove();
+      }
+      const label = btn.querySelector('span');
+      btn.style.borderColor = 'rgba(52,211,153,.6)';
+      btn.style.color = '#6EE7B7';
+      const icon = btn.querySelector('i, svg');
+      if (icon) icon.outerHTML = '<i data-lucide="check" class="w-4 h-4 pointer-events-none"></i>';
+      if (label) label.textContent = 'Copied';
+      lucide.createIcons();
+      setTimeout(() => {
+        btn.style.borderColor = ''; btn.style.color = '';
+        const ic = btn.querySelector('i, svg');
+        if (ic) ic.outerHTML = '<i data-lucide="copy" class="w-4 h-4 pointer-events-none"></i>';
+        if (label) label.textContent = 'Copy script';
+        lucide.createIcons();
+      }, 1500);
+    });
+  });
+});
+</script>
+</body>
+</html>
