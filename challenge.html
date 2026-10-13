@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aurora — animated SVG template kit</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  :root{
+    --bg:#12100E; --panel:#1A1613; --panel-2:#211B16; --line:#332A22;
+    --ink:#F4EDE4; --ink-dim:#A79785; --ink-faint:#6E6154;
+    --accent:#FF5D2E; --accent-2:#4EC5B5;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+       line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px 96px}
+  a{color:var(--accent)}
+  code{font-family:var(--mono);font-size:.86em;background:#241D17;border:1px solid var(--line);
+       border-radius:5px;padding:.1em .38em;color:#FFC9AE}
+  h1,h2,h3{line-height:1.15;letter-spacing:-.02em}
+  h1{font-size:clamp(2rem,5vw,3.1rem);margin:0 0 18px;font-weight:640}
+  h1 em{font-style:normal;color:var(--accent)}
+  h2{font-size:1.05rem;text-transform:uppercase;letter-spacing:.16em;color:var(--ink-dim);
+     font-weight:600;margin:0 0 22px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+  h3{font-size:1.32rem;margin:0 0 8px;font-weight:620}
+
+  /* ---------- masthead ---------- */
+  header{padding:64px 0 8px}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;
+           color:var(--accent);margin-bottom:20px}
+  .lede{font-size:1.14rem;color:#D9CDBF;max-width:70ch;margin:0 0 26px}
+  .lede strong{color:var(--ink)}
+  .facts{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+         border-radius:12px;overflow:hidden;margin:30px 0 0;
+         grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+  .fact{background:var(--panel);padding:16px 18px}
+  .fact dt{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+           color:var(--ink-faint);margin:0 0 6px}
+  .fact dd{margin:0;font-size:.94rem;color:var(--ink)}
+  section{padding:56px 0 0}
+
+  /* ---------- callout ---------- */
+  .callout{background:linear-gradient(180deg,#221A14,#1B1512);border:1px solid #4A3423;
+           border-left:3px solid var(--accent);border-radius:10px;padding:20px 22px;margin:34px 0 0}
+  .callout p{margin:0 0 10px;color:#E4D7C8}
+  .callout p:last-child{margin-bottom:0}
+  .callout b{color:var(--ink)}
+
+  /* ---------- paths ---------- */
+  .paths{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+  .path{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px}
+  .path .tag{display:inline-block;font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;
+             text-transform:uppercase;color:var(--bg);background:var(--accent);
+             border-radius:99px;padding:3px 10px;margin-bottom:14px}
+  .path.b .tag{background:var(--accent-2)}
+  .path.c .tag{background:#8E7B68}
+  .path h3{font-size:1.02rem;margin-bottom:10px}
+  .path p{font-size:.92rem;color:#C4B7A8;margin:0 0 12px}
+  .path pre{margin:0;background:#0E0C0A;border:1px solid var(--line);border-radius:8px;
+            padding:12px 14px;overflow-x:auto;font-size:.78rem;line-height:1.7;color:#D8C9B8}
+  .path pre b{color:var(--accent);font-weight:500}
+  .path ol{margin:0;padding-left:1.2em;font-size:.92rem;color:#C4B7A8}
+  .path ol li{margin-bottom:6px}
+
+  /* ---------- console ---------- */
+  .console{position:sticky;top:0;z-index:20;background:rgba(18,16,14,.92);backdrop-filter:blur(10px);
+           border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:8px 0 30px}
+  .console-row{display:flex;flex-wrap:wrap;gap:18px;align-items:center}
+  .field{display:flex;align-items:center;gap:8px}
+  .field label{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;
+               color:var(--ink-faint)}
+  input[type=color]{width:34px;height:26px;border:1px solid var(--line);border-radius:6px;
+                    background:none;padding:2px;cursor:pointer}
+  input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;cursor:pointer}
+  select{background:#0E0C0A;color:var(--ink);border:1px solid var(--line);border-radius:6px;
+         padding:5px 8px;font-family:var(--mono);font-size:.78rem;cursor:pointer}
+  button{background:#2A211A;color:var(--ink);border:1px solid var(--line);border-radius:7px;
+         padding:6px 13px;font-family:var(--mono);font-size:.76rem;cursor:pointer;transition:.15s}
+  button:hover{background:#3A2C21;border-color:#5A4433}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#1A0F09;font-weight:600}
+  button.primary:hover{background:#FF7A4F}
+
+  /* ---------- cards ---------- */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+        overflow:hidden;margin-bottom:26px}
+  .card-head{padding:24px 26px 0}
+  .card-head .num{font-family:var(--mono);font-size:.72rem;color:var(--accent);letter-spacing:.2em}
+  .card-head .role{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+                   color:var(--ink-faint);margin-left:10px}
+  .card-head p{color:#C4B7A8;font-size:.95rem;margin:4px 0 0;max-width:74ch}
+  .stage{margin:22px 0 0;padding:26px;display:flex;align-items:center;justify-content:center;
+         border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+         background:var(--tpl-bg,#17130F);min-height:210px}
+  .stage svg{display:block;max-width:100%;height:auto;color:var(--tpl-ink,#F4EDE4)}
+  .card-body{padding:22px 26px 26px;display:grid;gap:22px;
+             grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  @media (max-width:860px){.card-body{grid-template-columns:1fr}}
+  .spec{width:100%;border-collapse:collapse;font-size:.85rem}
+  .spec th{text-align:left;font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;
+           text-transform:uppercase;color:var(--ink-faint);font-weight:500;
+           padding:0 12px 8px 0;vertical-align:top;white-space:nowrap}
+  .spec td{color:#D2C5B6;padding:0 0 9px;vertical-align:top}
+  .spec tr:last-child th,.spec tr:last-child td{padding-bottom:0}
+  .export{background:#0E0C0A;border:1px solid var(--line);border-radius:9px;padding:14px 16px;
+          font-family:var(--mono);font-size:.76rem;color:#C9BA9F;line-height:1.8}
+  .export .lbl{color:var(--ink-faint);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase}
+  .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;
+            padding:12px 14px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px}
+  .scrub{display:flex;align-items:center;gap:10px;flex:1 1 240px}
+  input[type=range]{flex:1;accent-color:var(--accent);height:4px;cursor:pointer}
+  .clock{font-family:var(--mono);font-size:.74rem;color:var(--ink-dim);min-width:74px;text-align:right}
+
+  /* ---------- misc ---------- */
+  .grid2{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
+  .panel h3{font-size:.98rem;margin-bottom:8px}
+  .panel p{font-size:.9rem;color:#C4B7A8;margin:0 0 10px}
+  .panel p:last-child{margin-bottom:0}
+  .panel ul{margin:0;padding-left:1.15em;font-size:.9rem;color:#C4B7A8}
+  .panel li{margin-bottom:6px}
+  .terminal{background:#0E0C0A;border:1px solid var(--line);border-radius:10px;padding:16px 18px;
+            font-family:var(--mono);font-size:.78rem;line-height:1.85;color:#B9AB9A;overflow-x:auto}
+  .terminal .ok{color:#7FE3D6}
+  .terminal .cmd{color:#FFC9AE}
+  .terminal .dim{color:#6E6154}
+  .tree{background:#0E0C0A;border:1px solid var(--line);border-radius:10px;padding:16px 18px;
+        font-family:var(--mono);font-size:.79rem;line-height:1.9;color:#B9AB9A;overflow-x:auto}
+  .tree b{color:var(--ink);font-weight:500}
+  .tree i{color:var(--ink-faint);font-style:normal}
+  footer{margin-top:64px;padding-top:26px;border-top:1px solid var(--line);
+         color:var(--ink-faint);font-size:.85rem}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Animated SVG template kit · v1.0</div>
+    <h1>Aurora — five animated SVG patterns built to be <em>retimed</em>.</h1>
+    <p class="lede">Five production-shaped animations — a logo reveal, a loader, a success state, a
+      notification bell, and a stagger grid — authored so every timing decision is a single number
+      you can turn. Recolour the whole kit, stretch the stagger, swap the easing, and scrub the
+      timeline below. Everything on this page is one self-contained file.</p>
+    <dl class="facts">
+      <div class="fact"><dt>Templates</dt><dd>5 patterns, 6 channels</dd></div>
+      <div class="fact"><dt>Payload</dt><dd>25.7 KB total, largest 10.2 KB</dd></div>
+      <div class="fact"><dt>Dependencies</dt><dd>None — inline SVG + SMIL</dd></div>
+      <div class="fact"><dt>Verified</dt><dd>42 structural + geometry checks</dd></div>
+    </dl>
+  </header>
+
+  <div class="callout">
+    <p><b>Before you wire this into SVGator, one correction.</b> SVGator's MCP server is real, but it
+      is not at <code>svgator.com</code> — that is the marketing site. The endpoint is
+      <code>https://mcp.svgator.com/mcp</code>, it speaks Streamable HTTP, and it authenticates with
+      OAuth 2.1 against your own SVGator account.</p>
+    <p>That server is <b>not reachable from this conversation</b>: Arena has no SVGator connector, and
+      the endpoint gates every request behind a bearer token from <em>your</em> sign-in. So these
+      templates were authored and verified locally. The paths below are how you land them in SVGator
+      from your own client, in about two minutes.</p>
+  </div>
+
+  <section id="wire">
+    <h2>Getting this into SVGator</h2>
+    <div class="paths">
+      <div class="path a">
+        <span class="tag">Path A · no account needed</span>
+        <h3>Drop a template straight into the web</h3>
+        <p>These files are finished animated SVGs. They need no build step and no tooling — paste and
+          ship.</p>
+        <pre>&lt;img src="templates/<b>02-orbit-loader.svg</b>" width="120" alt="Loading"&gt;</pre>
+        <p style="margin-top:12px">For retinting and control, inline it instead — the ring and wordmark
+          use <code>currentColor</code>, so one CSS rule recolours them.</p>
+        <pre>[data-tpl] svg { color: <b>#FF3D7F</b>; }</pre>
+      </div>
+      <div class="path b">
+        <span class="tag">Path B · recommended</span>
+        <h3>Connect the MCP server, then create the project</h3>
+        <p>You own the project, the editor link, and the exports. Run this in Claude Code or any
+          MCP-speaking client:</p>
+        <pre>claude mcp add --transport http svgator \
+  <b>https://mcp.svgator.com/mcp</b></pre>
+        <p style="margin-top:12px">Then authenticate with <code>/mcp</code> → <b>svgator</b>. In
+          claude.ai, add it as a custom connector with the same URL. Once connected:</p>
+        <ol style="margin-top:12px">
+          <li>Call <code>describe_shape</code> for <code>root</code>, <code>circle</code>,
+            <code>path</code>, <code>keyframe</code>, <code>easing</code>, <code>paint</code>.</li>
+          <li>Patch any field name the reference disagrees with — that call needs no auth, so you can
+            diff it before spending a create.</li>
+          <li><code>create_project</code> with <code>templates/svgator-project.01-bloom.json</code>.</li>
+          <li><code>export_project</code> → <code>svg</code>, <code>inline: true</code> to get the
+            markup back.</li>
+        </ol>
+      </div>
+      <div class="path c">
+        <span class="tag">Path C · fastest</span>
+        <h3>Import into the visual editor</h3>
+        <p>Open the SVGator editor, start a new project at 480×280 (or 120×120 for the loader and
+          bell), and import the file. The elements arrive named — <code>Petal&nbsp;1…6</code>,
+          <code>Outer&nbsp;Ring</code>, <code>Wordmark</code> — which is the point of the naming
+          discipline.</p>
+        <p>You then rebuild the keyframes by hand off the spec table under each preview. Slower, but
+          you keep everything inside the GUI.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="playground">
+    <h2>The kit, live</h2>
+
+    <div class="console">
+      <div class="console-row">
+        <div class="field">
+          <label for="reduced">Reduced motion</label>
+          <input type="checkbox" id="reduced">
+        </div>
+        <div class="field">
+          <label for="pal-primary">Brand</label>
+          <input type="color" id="pal-primary" value="#FF5D2E">
+        </div>
+        <div class="field">
+          <label for="pal-secondary">Accent</label>
+          <input type="color" id="pal-secondary" value="#4EC5B5">
+        </div>
+        <div class="field">
+          <label for="pal-bg">Canvas</label>
+          <input type="color" id="pal-bg" value="#17130F">
+        </div>
+        <div class="field">
+          <button id="reset" class="primary">Reset all</button>
+        </div>
+      </div>
+    </div>
+
+    <p style="color:var(--ink-dim);font-size:.9rem;margin:-14px 0 26px">
+      Speed scales <code>dur</code>; Delay/Stagger scales <code>begin</code> — together they retime the
+      piece without touching a single keyframe value. Easing override rewrites <code>keySplines</code>
+      uniformly, which is deliberately blunt: it shows you how much of the feel lives in the curve.
+    </p>
+
+    
+    <article class="card" data-tpl="tpl-01" data-duration="2.15" data-settle="2.30">
+      <div class="card-head">
+        <div><span class="num">01</span><span class="role">Entrance / hero reveal</span></div>
+        <h3>Bloom Logo Reveal</h3>
+        <p>Six lens petals swing and scale into a bloom mark, a ring draws itself around it, then the wordmark rises. Petals are staggered 60&nbsp;ms apart so the eye reads the bloom as one gesture rather than six shapes.</p>
+      </div>
+
+      <div class="stage"></div>
+
+      <div class="card-body">
+        <div>
+          <table class="spec">
+                        <tr><th>Duration</th><td>2.15s, one-shot, holds the final frame</td></tr>
+            <tr><th>Trigger</th><td>load (fire once on render)</td></tr>
+            <tr><th>Stagger</th><td>60ms per petal, 6 petals</td></tr>
+            <tr><th>Channels</th><td>transform.rotate · transform.scale · compositing.opacity · stroke.dashoffset</td></tr>
+            <tr><th>Signature</th><td>4% overshoot on each petal's ease — playfulness without wobble</td></tr>
+          </table>
+          <div class="export" style="margin-top:18px">
+            <div class="lbl">SVGator export settings</div>
+            SVG + JavaScript · iterations 1 · direction normal · start trigger: load
+          </div>
+        </div>
+        <div>
+          <div class="controls" style="margin-bottom:14px">
+            <button class="ctl-play">Freeze</button>
+            <button class="ctl-replay">Replay</button>
+            <div class="field">
+              <label>Speed</label>
+              <select class="ctl-speed">
+                <option value="0.5">0.5×</option>
+                <option value="0.75">0.75×</option>
+                <option value="1" selected>1× authored</option>
+                <option value="1.5">1.5×</option>
+                <option value="2">2×</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Delay ×</label>
+              <select class="ctl-delay">
+                <option value="0.5">0.5×</option>
+                <option value="1" selected>1×</option>
+                <option value="2">2×</option>
+                <option value="3">3×</option>
+              </select>
+            </div>
+          </div>
+          <div class="controls">
+            <div class="field" style="flex:1 1 100%">
+              <label>Easing</label>
+              <select class="ctl-ease" style="flex:1">
+                <option value="default" selected>Authored curves</option>
+                <option value="linear">Linear (flat)</option>
+                <option value="calm">Ease out (calm)</option>
+                <option value="playful">Big overshoot (playful)</option>
+                <option value="snap">Snap in (crisp)</option>
+              </select>
+            </div>
+            <div class="scrub">
+              <label class="sr" for="scrub-01">Scrub Bloom Logo Reveal</label>
+              <input type="range" id="scrub-01" class="ctl-scrub" min="0" value="0">
+              <span class="clock">0.00s</span>
+            </div>
+          </div>
+          <p style="font-size:.82rem;color:var(--ink-faint);margin:12px 0 0">
+            Scrubbing pauses the timeline and jumps the real animation clock, so what you see is the
+            authored frame — not an approximation.
+          </p>
+        </div>
+      </div>
+    </article>
+
+    <template id="tpl-01">
+      <svg xmlns="http://www.w3.org/2000/svg" width="480" height="280" viewBox="0 0 480 280" fill="none" role="img" aria-labelledby="bloomTitle bloomDesc">
+        <title id="bloomTitle">Bloom logo reveal</title>
+        <desc id="bloomDesc">Six lens petals swing and scale into a bloom mark, an outer ring draws itself around it, and the wordmark rises into place.</desc>
+
+        <!-- ===================================================================
+             01 BLOOM LOGO REVEAL — hero / entrance pattern
+             Duration 2.15s · one-shot, holds on last frame
+             Tintable: ring + wordmark use currentColor (set CSS `color` to retint)
+             Editable: swap the <text> for your wordmark, or delete it
+             =================================================================== -->
+
+        <defs>
+          <linearGradient id="bloomGrad" gradientUnits="userSpaceOnUse" x1="0" y1="-72" x2="0" y2="72">
+            <stop offset="0" stop-color="#FF8A4C"/>
+            <stop offset="1" stop-color="#E8451B"/>
+          </linearGradient>
+        </defs>
+
+        <g transform="translate(240,112)">
+
+          <!-- pulse ring: fires once after the mark lands -->
+          <circle cx="0" cy="0" r="86" stroke="#FF5D2E" stroke-width="2" opacity="0">
+            <animate attributeName="opacity" values="0;0.5;0" keyTimes="0;0.18;1" dur="0.8s" begin="1.35s" fill="freeze"/>
+            <animate attributeName="r" values="86;102" dur="0.8s" begin="1.35s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.7 0.3 1"/>
+            <animate attributeName="stroke-width" values="2;0.4" dur="0.8s" begin="1.35s" fill="freeze"/>
+          </circle>
+
+          <!-- outer ring draws itself from the top.
+               pathLength="100" normalizes the circle so dasharray/dashoffset are exact
+               in every engine (2*pi*86 has no single correct decimal). -->
+          <circle cx="0" cy="0" r="86" stroke="currentColor" stroke-opacity="0.85" stroke-width="3" stroke-linecap="round"
+                  transform="rotate(-90)" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" opacity="0">
+            <animate attributeName="opacity" values="0;1" dur="0.2s" begin="0.28s" fill="freeze"/>
+            <animate attributeName="stroke-dashoffset" values="100;0" dur="0.9s" begin="0.28s" fill="freeze"
+                     calcMode="spline" keyTimes="0;1" keySplines="0.25 0.6 0.25 1"/>
+          </circle>
+
+          <!-- six lens petals: swing in from +34deg, scale up, staggered 60ms apart -->
+          <g transform="rotate(0)">
+            <g opacity="0">
+              <animateTransform attributeName="transform" type="rotate" values="34;0" dur="0.55s" begin="0.05s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1.3 0.36 1"/>
+              <animate attributeName="opacity" values="0;1" dur="0.22s" begin="0.05s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.4;1" dur="0.55s" begin="0.05s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 1.35 0.4 1"/>
+                <path transform="translate(0,-40)" d="M0,-30 C11,-18 11,18 0,30 C-11,18 -11,-18 0,-30 Z" fill="url(#bloomGrad)"/>
+              </g>
+            </g>
+          </g>
+
+          <g transform="rotate(60)">
+            <g opacity="0">
+              <animateTransform attributeName="transform" type="rotate" values="34;0" dur="0.55s" begin="0.11s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1.3 0.36 1"/>
+              <animate attributeName="opacity" values="0;1" dur="0.22s" begin="0.11s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.4;1" dur="0.55s" begin="0.11s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 1.35 0.4 1"/>
+                <path transform="translate(0,-40)" d="M0,-30 C11,-18 11,18 0,30 C-11,18 -11,-18 0,-30 Z" fill="url(#bloomGrad)"/>
+              </g>
+            </g>
+          </g>
+
+          <g transform="rotate(120)">
+            <g opacity="0">
+              <animateTransform attributeName="transform" type="rotate" values="34;0" dur="0.55s" begin="0.17s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1.3 0.36 1"/>
+              <animate attributeName="opacity" values="0;1" dur="0.22s" begin="0.17s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.4;1" dur="0.55s" begin="0.17s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 1.35 0.4 1"/>
+                <path transform="translate(0,-40)" d="M0,-30 C11,-18 11,18 0,30 C-11,18 -11,-18 0,-30 Z" fill="url(#bloomGrad)"/>
+              </g>
+            </g>
+          </g>
+
+          <g transform="rotate(180)">
+            <g opacity="0">
+              <animateTransform attributeName="transform" type="rotate" values="34;0" dur="0.55s" begin="0.23s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1.3 0.36 1"/>
+              <animate attributeName="opacity" values="0;1" dur="0.22s" begin="0.23s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.4;1" dur="0.55s" begin="0.23s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 1.35 0.4 1"/>
+                <path transform="translate(0,-40)" d="M0,-30 C11,-18 11,18 0,30 C-11,18 -11,-18 0,-30 Z" fill="url(#bloomGrad)"/>
+              </g>
+            </g>
+          </g>
+
+          <g transform="rotate(240)">
+            <g opacity="0">
+              <animateTransform attributeName="transform" type="rotate" values="34;0" dur="0.55s" begin="0.29s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1.3 0.36 1"/>
+              <animate attributeName="opacity" values="0;1" dur="0.22s" begin="0.29s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.4;1" dur="0.55s" begin="0.29s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 1.35 0.4 1"/>
+                <path transform="translate(0,-40)" d="M0,-30 C11,-18 11,18 0,30 C-11,18 -11,-18 0,-30 Z" fill="url(#bloomGrad)"/>
+              </g>
+            </g>
+          </g>
+
+          <g transform="rotate(300)">
+            <g opacity="0">
+              <animateTransform attributeName="transform" type="rotate" values="34;0" dur="0.55s" begin="0.35s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1.3 0.36 1"/>
+              <animate attributeName="opacity" values="0;1" dur="0.22s" begin="0.35s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.4;1" dur="0.55s" begin="0.35s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 1.35 0.4 1"/>
+                <path transform="translate(0,-40)" d="M0,-30 C11,-18 11,18 0,30 C-11,18 -11,-18 0,-30 Z" fill="url(#bloomGrad)"/>
+              </g>
+            </g>
+          </g>
+
+          <!-- core dot: lands after the petals so the bloom reads as one gesture -->
+          <g opacity="0">
+            <animate attributeName="opacity" values="0;1" dur="0.2s" begin="0.6s" fill="freeze"/>
+            <g>
+              <animateTransform attributeName="transform" type="scale" values="0;1" dur="0.45s" begin="0.6s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 1.4 0.4 1"/>
+              <circle cx="0" cy="0" r="9.5" fill="#FF5D2E"/>
+            </g>
+          </g>
+        </g>
+
+        <!-- wordmark -->
+        <g opacity="0">
+          <animate attributeName="opacity" values="0;1" dur="0.35s" begin="0.95s" fill="freeze"/>
+          <g>
+            <animateTransform attributeName="transform" type="translate" values="240,254;240,244" dur="0.5s" begin="0.95s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.8 0.3 1"/>
+            <text x="0" y="0" dx="-4.5" text-anchor="middle" fill="currentColor"
+                  font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+                  font-size="30" font-weight="600" letter-spacing="9">MERIDIAN</text>
+          </g>
+        </g>
+      </svg>
+    </template>
+
+
+    <article class="card" data-tpl="tpl-02" data-duration="1.35" data-settle="0.50">
+      <div class="card-head">
+        <div><span class="num">02</span><span class="role">Ambient / continuous</span></div>
+        <h3>Orbit Loader</h3>
+        <p>A long arc leads clockwise while a shorter arc counter-rotates, and the core breathes out of phase. Two speeds (1.35s / 2.1s) that never re-sync read as continuous activity without a visible loop point.</p>
+      </div>
+
+      <div class="stage"></div>
+
+      <div class="card-body">
+        <div>
+          <table class="spec">
+                        <tr><th>Duration</th><td>1.35s lead / 2.1s counter, infinite</td></tr>
+            <tr><th>Trigger</th><td>load</td></tr>
+            <tr><th>Channels</th><td>transform.rotate · transform.scale</td></tr>
+            <tr><th>Arcs</th><td>44.3% (159.5°) ember · 14.6% (52.6°) teal</td></tr>
+            <tr><th>Budget</th><td>1.8 KB — safe for inline, above-the-fold use</td></tr>
+          </table>
+          <div class="export" style="margin-top:18px">
+            <div class="lbl">SVGator export settings</div>
+            SVG + CSS · iterations infinite · start trigger: load · keep under 10 KB
+          </div>
+        </div>
+        <div>
+          <div class="controls" style="margin-bottom:14px">
+            <button class="ctl-play">Freeze</button>
+            <button class="ctl-replay">Replay</button>
+            <div class="field">
+              <label>Speed</label>
+              <select class="ctl-speed">
+                <option value="0.5">0.5×</option>
+                <option value="0.75">0.75×</option>
+                <option value="1" selected>1× authored</option>
+                <option value="1.5">1.5×</option>
+                <option value="2">2×</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Delay ×</label>
+              <select class="ctl-delay">
+                <option value="0.5">0.5×</option>
+                <option value="1" selected>1×</option>
+                <option value="2">2×</option>
+                <option value="3">3×</option>
+              </select>
+            </div>
+          </div>
+          <div class="controls">
+            <div class="field" style="flex:1 1 100%">
+              <label>Easing</label>
+              <select class="ctl-ease" style="flex:1">
+                <option value="default" selected>Authored curves</option>
+                <option value="linear">Linear (flat)</option>
+                <option value="calm">Ease out (calm)</option>
+                <option value="playful">Big overshoot (playful)</option>
+                <option value="snap">Snap in (crisp)</option>
+              </select>
+            </div>
+            <div class="scrub">
+              <label class="sr" for="scrub-02">Scrub Orbit Loader</label>
+              <input type="range" id="scrub-02" class="ctl-scrub" min="0" value="0">
+              <span class="clock">0.00s</span>
+            </div>
+          </div>
+          <p style="font-size:.82rem;color:var(--ink-faint);margin:12px 0 0">
+            Scrubbing pauses the timeline and jumps the real animation clock, so what you see is the
+            authored frame — not an approximation.
+          </p>
+        </div>
+      </div>
+    </article>
+
+    <template id="tpl-02">
+      <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" fill="none" role="img" aria-labelledby="ldTitle ldDesc">
+        <title id="ldTitle">Orbit loader</title>
+        <desc id="ldDesc">Two arcs orbit a pulsing core in opposite directions. Loops forever.</desc>
+
+        <!-- ===================================================================
+             02 ORBIT LOADER — ambient / continuous pattern
+             Loop: infinite · 1.35s ember arc clockwise, 2.1s teal arc anticlockwise
+             Tintable: the track uses currentColor
+             =================================================================== -->
+
+        <g transform="translate(60,60)">
+          <!-- track -->
+          <circle cx="0" cy="0" r="44" stroke="currentColor" stroke-opacity="0.14" stroke-width="7"/>
+
+          <!-- leading arc: 120deg of circumference, clockwise -->
+          <g>
+            <animateTransform attributeName="transform" type="rotate" values="-70;290" dur="1.35s" repeatCount="indefinite"/>
+            <circle cx="0" cy="0" r="44" stroke="#FF5D2E" stroke-width="7" stroke-linecap="round" pathLength="100" stroke-dasharray="44.3 55.7"/>
+          </g>
+
+          <!-- counter arc: 14.6% = 52.4deg of circumference, anticlockwise -->
+          <g>
+            <animateTransform attributeName="transform" type="rotate" values="290;-70" dur="2.1s" repeatCount="indefinite"/>
+            <circle cx="0" cy="0" r="44" stroke="#4EC5B5" stroke-width="7" stroke-linecap="round" pathLength="100" stroke-dasharray="14.6 85.4" stroke-opacity="0.9"/>
+          </g>
+
+          <!-- core: breathes slightly out of phase with the arcs -->
+          <g>
+            <animateTransform attributeName="transform" type="scale" values="1;1.28;1" dur="1.05s" repeatCount="indefinite"
+                              calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+            <circle cx="0" cy="0" r="7" fill="#FF5D2E"/>
+          </g>
+        </g>
+      </svg>
+    </template>
+
+
+    <article class="card" data-tpl="tpl-03" data-duration="1.70" data-settle="1.70">
+      <div class="card-head">
+        <div><span class="num">03</span><span class="role">State feedback</span></div>
+        <h3>Success Check</h3>
+        <p>The ring draws itself with a slight scale pop, the tick draws in <em>behind</em> it so it never looks detached, and one soft ring radiates outward to release the beat.</p>
+      </div>
+
+      <div class="stage"></div>
+
+      <div class="card-body">
+        <div>
+          <table class="spec">
+                        <tr><th>Duration</th><td>1.7s, one-shot, holds</td></tr>
+            <tr><th>Trigger</th><td>click (on the action that succeeded)</td></tr>
+            <tr><th>Channels</th><td>transform.scale · stroke.dashoffset · compositing.opacity</td></tr>
+            <tr><th>Timing</th><td>tick starts at 0.44s, when the ring is ~90% closed</td></tr>
+            <tr><th>Semantic</th><td>colour is fixed teal — a success state should not be re-tintable per brand</td></tr>
+          </table>
+          <div class="export" style="margin-top:18px">
+            <div class="lbl">SVGator export settings</div>
+            SVG + CSS · iterations 1 · start trigger: click · click behaviour: freeze
+          </div>
+        </div>
+        <div>
+          <div class="controls" style="margin-bottom:14px">
+            <button class="ctl-play">Freeze</button>
+            <button class="ctl-replay">Replay</button>
+            <div class="field">
+              <label>Speed</label>
+              <select class="ctl-speed">
+                <option value="0.5">0.5×</option>
+                <option value="0.75">0.75×</option>
+                <option value="1" selected>1× authored</option>
+                <option value="1.5">1.5×</option>
+                <option value="2">2×</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Delay ×</label>
+              <select class="ctl-delay">
+                <option value="0.5">0.5×</option>
+                <option value="1" selected>1×</option>
+                <option value="2">2×</option>
+                <option value="3">3×</option>
+              </select>
+            </div>
+          </div>
+          <div class="controls">
+            <div class="field" style="flex:1 1 100%">
+              <label>Easing</label>
+              <select class="ctl-ease" style="flex:1">
+                <option value="default" selected>Authored curves</option>
+                <option value="linear">Linear (flat)</option>
+                <option value="calm">Ease out (calm)</option>
+                <option value="playful">Big overshoot (playful)</option>
+                <option value="snap">Snap in (crisp)</option>
+              </select>
+            </div>
+            <div class="scrub">
+              <label class="sr" for="scrub-03">Scrub Success Check</label>
+              <input type="range" id="scrub-03" class="ctl-scrub" min="0" value="0">
+              <span class="clock">0.00s</span>
+            </div>
+          </div>
+          <p style="font-size:.82rem;color:var(--ink-faint);margin:12px 0 0">
+            Scrubbing pauses the timeline and jumps the real animation clock, so what you see is the
+            authored frame — not an approximation.
+          </p>
+        </div>
+      </div>
+    </article>
+
+    <template id="tpl-03">
+      <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" fill="none" role="img" aria-labelledby="okTitle okDesc">
+        <title id="okTitle">Success check</title>
+        <desc id="okDesc">A ring draws itself with a scale pop, the tick draws in behind it, then a ring radiates outward and fades.</desc>
+
+        <!-- ===================================================================
+             03 SUCCESS CHECK — state feedback pattern
+             Duration 1.7s · one-shot, holds on last frame
+             Tintable: none (semantic colour is fixed teal)
+             =================================================================== -->
+
+        <g transform="translate(60,60)">
+          <g opacity="0">
+            <animate attributeName="opacity" values="0;1" dur="0.25s" begin="0s" fill="freeze"/>
+            <g>
+              <!-- scale pop with a 4% overshoot: reads as "confirmed", not "appeared" -->
+              <animateTransform attributeName="transform" type="scale" values="0.82;1.04;1" keyTimes="0;0.6;1" dur="0.6s" begin="0s" fill="freeze"
+                                calcMode="spline" keySplines="0.2 0.9 0.4 1;0.3 0 0.3 1"/>
+
+              <circle cx="0" cy="0" r="44" stroke="#4EC5B5" stroke-width="6" stroke-linecap="round"
+                      transform="rotate(-90)" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100">
+                <animate attributeName="stroke-dashoffset" values="100;0" dur="0.5s" begin="0s" fill="freeze"
+                         calcMode="spline" keyTimes="0;1" keySplines="0.3 0.5 0.25 1"/>
+              </circle>
+
+              <!-- tick starts once the ring is ~90% closed, so it never looks detached -->
+              <path d="M-22,1 L-6,17 L24,-15" stroke="#4EC5B5" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"
+                    pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" opacity="0">
+                <animate attributeName="opacity" values="0;1" dur="0.01s" begin="0.42s" fill="freeze"/>
+                <animate attributeName="stroke-dashoffset" values="100;0" dur="0.34s" begin="0.44s" fill="freeze"
+                         calcMode="spline" keyTimes="0;1" keySplines="0.25 0.6 0.3 1"/>
+              </path>
+            </g>
+          </g>
+
+          <!-- radiating ring: one soft outward beat to close the beat -->
+          <circle cx="0" cy="0" r="44" stroke="#4EC5B5" stroke-width="5" opacity="0">
+            <animate attributeName="opacity" values="0;0.45;0" keyTimes="0;0.15;1" dur="0.7s" begin="1.0s" fill="freeze"/>
+            <animate attributeName="r" values="44;66" dur="0.7s" begin="1.0s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.7 0.3 1"/>
+            <animate attributeName="stroke-width" values="5;0.5" dur="0.7s" begin="1.0s" fill="freeze"/>
+          </circle>
+        </g>
+      </svg>
+    </template>
+
+
+    <article class="card" data-tpl="tpl-04" data-duration="3.00" data-settle="1.60">
+      <div class="card-head">
+        <div><span class="num">04</span><span class="role">Micro-interaction</span></div>
+        <h3>Notification Bell</h3>
+        <p>The bell swings on a damped oscillation (six decreasing throws), the clapper trails it by 50&nbsp;ms for follow-through, and the badge pops in with a bounce then pings.</p>
+      </div>
+
+      <div class="stage"></div>
+
+      <div class="card-body">
+        <div>
+          <table class="spec">
+                        <tr><th>Duration</th><td>3s cycle, infinite — motion occupies the first 1.7s, then rests</td></tr>
+            <tr><th>Trigger</th><td>load, or hover on a real bell control</td></tr>
+            <tr><th>Stagger</th><td>50ms clapper lag (follow-through)</td></tr>
+            <tr><th>Channels</th><td>transform.rotate · transform.scale · compositing.opacity · stroke.width</td></tr>
+            <tr><th>Pivot</th><td>swing origin is (0,-33) — the bell's mounting point, not its centre</td></tr>
+          </table>
+          <div class="export" style="margin-top:18px">
+            <div class="lbl">SVGator export settings</div>
+            SVG + JavaScript · iterations infinite · start trigger: load or mouseover
+          </div>
+        </div>
+        <div>
+          <div class="controls" style="margin-bottom:14px">
+            <button class="ctl-play">Freeze</button>
+            <button class="ctl-replay">Replay</button>
+            <div class="field">
+              <label>Speed</label>
+              <select class="ctl-speed">
+                <option value="0.5">0.5×</option>
+                <option value="0.75">0.75×</option>
+                <option value="1" selected>1× authored</option>
+                <option value="1.5">1.5×</option>
+                <option value="2">2×</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Delay ×</label>
+              <select class="ctl-delay">
+                <option value="0.5">0.5×</option>
+                <option value="1" selected>1×</option>
+                <option value="2">2×</option>
+                <option value="3">3×</option>
+              </select>
+            </div>
+          </div>
+          <div class="controls">
+            <div class="field" style="flex:1 1 100%">
+              <label>Easing</label>
+              <select class="ctl-ease" style="flex:1">
+                <option value="default" selected>Authored curves</option>
+                <option value="linear">Linear (flat)</option>
+                <option value="calm">Ease out (calm)</option>
+                <option value="playful">Big overshoot (playful)</option>
+                <option value="snap">Snap in (crisp)</option>
+              </select>
+            </div>
+            <div class="scrub">
+              <label class="sr" for="scrub-04">Scrub Notification Bell</label>
+              <input type="range" id="scrub-04" class="ctl-scrub" min="0" value="0">
+              <span class="clock">0.00s</span>
+            </div>
+          </div>
+          <p style="font-size:.82rem;color:var(--ink-faint);margin:12px 0 0">
+            Scrubbing pauses the timeline and jumps the real animation clock, so what you see is the
+            authored frame — not an approximation.
+          </p>
+        </div>
+      </div>
+    </article>
+
+    <template id="tpl-04">
+      <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" fill="none" role="img" aria-labelledby="bellTitle bellDesc">
+        <title id="bellTitle">Notification bell</title>
+        <desc id="bellDesc">A notification bell swings on a damped oscillation with a follow-through clapper, while a badge pops in and pulses.</desc>
+
+        <!-- ===================================================================
+             04 NOTIFICATION BELL — micro-interaction pattern
+             Loop: infinite, 3s cycle — ring happens in the first ~1.7s, then rests
+             Tintable: none. Pivot for the swing is (0,-33) in local space.
+             =================================================================== -->
+
+        <defs>
+          <linearGradient id="bellGrad" gradientUnits="userSpaceOnUse" x1="0" y1="-34" x2="0" y2="22">
+            <stop offset="0" stop-color="#FF8A4C"/>
+            <stop offset="1" stop-color="#E8451B"/>
+          </linearGradient>
+        </defs>
+
+        <g transform="translate(60,56)">
+          <!-- bell swings about its top; amplitude decays like a struck object -->
+          <g>
+            <animateTransform attributeName="transform" type="rotate"
+              values="0 0 -33;-13 0 -33;10 0 -33;-7.5 0 -33;5 0 -33;-2.5 0 -33;0 0 -33;0 0 -33"
+              keyTimes="0;0.10;0.20;0.30;0.40;0.48;0.55;1" dur="3s" repeatCount="indefinite" calcMode="spline"
+              keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1"/>
+
+            <circle cx="0" cy="-33" r="4" fill="#E8451B"/>
+            <path d="M0,-31 C8.5,-31 15,-24 15,-14 L15,-2 C15,5 18,10 22,15 C24,17.5 25,19 25,20 L-25,20 C-25,19 -24,17.5 -22,15 C-18,10 -15,5 -15,-2 L-15,-14 C-15,-24 -8.5,-31 0,-31 Z" fill="url(#bellGrad)"/>
+
+            <!-- clapper: same pivot, smaller amplitude, ~50ms behind = follow-through -->
+            <g>
+              <animateTransform attributeName="transform" type="rotate"
+                values="0 0 -33;-7 0 -33;5.5 0 -33;-4 0 -33;2.7 0 -33;-1.4 0 -33;0 0 -33;0 0 -33"
+                keyTimes="0;0.10;0.20;0.30;0.40;0.48;0.55;1" dur="3s" begin="0.05s" repeatCount="indefinite" calcMode="spline"
+                keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1"/>
+              <circle cx="0" cy="27" r="5.5" fill="#E8451B"/>
+            </g>
+
+            <!-- badge: pops in with overshoot, then breathes -->
+            <g opacity="0">
+              <animate attributeName="opacity" values="0;1" dur="0.15s" begin="0.15s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0;1" dur="0.4s" begin="0.15s" fill="freeze"
+                                  calcMode="spline" keyTimes="0;1" keySplines="0.2 1.5 0.4 1"/>
+                <g transform="translate(24,-16)">
+                  <g>
+                    <animateTransform attributeName="transform" type="scale" values="1;1.1;1" begin="1.7s" dur="3s" repeatCount="indefinite"
+                                      keyTimes="0;0.16;0.32" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+                    <circle cx="0" cy="0" r="11" fill="#4EC5B5" stroke="#17130F" stroke-width="3.5"/>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+
+          <!-- badge pulse ring, re-fires with each 3s cycle -->
+          <circle cx="24" cy="-16" r="11" stroke="#7FE3D6" stroke-width="3.5" opacity="0">
+            <animate attributeName="opacity" values="0;0.85;0;0" keyTimes="0;0.05;0.16;1" dur="3s" begin="1.5s" repeatCount="indefinite"/>
+            <animate attributeName="r" values="11;27;27;27" keyTimes="0;0.16;0.17;1" dur="3s" begin="1.5s" repeatCount="indefinite" calcMode="spline"
+                     keySplines="0.2 0.7 0.3 1;0.4 0 0.6 1;0.4 0 0.6 1"/>
+            <animate attributeName="stroke-width" values="3.5;0.5;0.5;0.5" keyTimes="0;0.16;0.17;1" dur="3s" begin="1.5s" repeatCount="indefinite"/>
+          </circle>
+        </g>
+      </svg>
+    </template>
+
+
+    <article class="card" data-tpl="tpl-05" data-duration="2.90" data-settle="1.60">
+      <div class="card-head">
+        <div><span class="num">05</span><span class="role">Multi-element choreography</span></div>
+        <h3>Stagger Grid</h3>
+        <p>Twelve tiles enter on a diagonal wave — the delay is <code>(col + row) × 55ms</code> — then each drifts on its own float phase. One teal tile is the focal accent, so the grid has a hierarchy instead of reading as twelve equal things.</p>
+      </div>
+
+      <div class="stage"></div>
+
+      <div class="card-body">
+        <div>
+          <table class="spec">
+                        <tr><th>Duration</th><td>1.15s entrance, then an infinite float</td></tr>
+            <tr><th>Trigger</th><td>load (or scroll into view)</td></tr>
+            <tr><th>Stagger</th><td>(col + row) × 55ms diagonal, row-major ≤ 320ms</td></tr>
+            <tr><th>Channels</th><td>transform.scale · transform.translate · compositing.opacity</td></tr>
+            <tr><th>Note</th><td>the reference case for the Delay/Stagger control below</td></tr>
+          </table>
+          <div class="export" style="margin-top:18px">
+            <div class="lbl">SVGator export settings</div>
+            SVG + CSS · iterations infinite · trigger: load · direction: normal
+          </div>
+        </div>
+        <div>
+          <div class="controls" style="margin-bottom:14px">
+            <button class="ctl-play">Freeze</button>
+            <button class="ctl-replay">Replay</button>
+            <div class="field">
+              <label>Speed</label>
+              <select class="ctl-speed">
+                <option value="0.5">0.5×</option>
+                <option value="0.75">0.75×</option>
+                <option value="1" selected>1× authored</option>
+                <option value="1.5">1.5×</option>
+                <option value="2">2×</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Delay ×</label>
+              <select class="ctl-delay">
+                <option value="0.5">0.5×</option>
+                <option value="1" selected>1×</option>
+                <option value="2">2×</option>
+                <option value="3">3×</option>
+              </select>
+            </div>
+          </div>
+          <div class="controls">
+            <div class="field" style="flex:1 1 100%">
+              <label>Easing</label>
+              <select class="ctl-ease" style="flex:1">
+                <option value="default" selected>Authored curves</option>
+                <option value="linear">Linear (flat)</option>
+                <option value="calm">Ease out (calm)</option>
+                <option value="playful">Big overshoot (playful)</option>
+                <option value="snap">Snap in (crisp)</option>
+              </select>
+            </div>
+            <div class="scrub">
+              <label class="sr" for="scrub-05">Scrub Stagger Grid</label>
+              <input type="range" id="scrub-05" class="ctl-scrub" min="0" value="0">
+              <span class="clock">0.00s</span>
+            </div>
+          </div>
+          <p style="font-size:.82rem;color:var(--ink-faint);margin:12px 0 0">
+            Scrubbing pauses the timeline and jumps the real animation clock, so what you see is the
+            authored frame — not an approximation.
+          </p>
+        </div>
+      </div>
+    </article>
+
+    <template id="tpl-05">
+      <svg xmlns="http://www.w3.org/2000/svg" width="480" height="280" viewBox="0 0 480 280" fill="none" role="img" aria-labelledby="gridTitle gridDesc">
+        <title id="gridTitle">Stagger grid</title>
+        <desc id="gridDesc">Twelve tiles enter on a diagonal wave from the top-left, then drift gently on a continuous float. One teal tile is the focal accent.</desc>
+
+        <!-- ===================================================================
+             05 STAGGER GRID — multi-element / staggered choreography pattern
+             Entrance 1.15s one-shot, then an infinite float
+             The diagonal stagger is (col + row) * 55ms — the reference for the
+             "Stagger" control in the playground.
+             Tintable: tile gradient + accent tile colour
+             =================================================================== -->
+
+        <defs>
+          <linearGradient id="tileGrad" gradientUnits="userSpaceOnUse" x1="0" y1="56" x2="0" y2="224">
+            <stop offset="0" stop-color="#FF8A4C"/>
+            <stop offset="1" stop-color="#E8451B"/>
+          </linearGradient>
+        </defs>
+
+        <g transform="translate(126,56)">
+          <!-- ── row 0 ─────────────────────────────────────────────────────── -->
+          <g transform="translate(0,0)">
+            <g opacity="0">
+              <animate attributeName="opacity" values="0;1" dur="0.34s" begin="0.10s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.6;1.07;1" keyTimes="0;0.62;1" dur="0.5s" begin="0.10s" fill="freeze"
+                                  calcMode="spline" keySplines="0.2 1.1 0.4 1;0.3 0 0.3 1"/>
+                <g><animateTransform attributeName="transform" type="translate" values="0 0;0 -4;0 0" dur="2.9s" begin="0.9s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+                  <rect width="48" height="48" rx="12" fill="url(#tileGrad)"/></g>
+              </g>
+            </g>
+          </g>
+          <g transform="translate(60,0)">
+            <g opacity="0">
+              <animate attributeName="opacity" values="0;1" dur="0.34s" begin="0.155s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.6;1.07;1" keyTimes="0;0.62;1" dur="0.5s" begin="0.155s" fill="freeze"
+                                  calcMode="spline" keySplines="0.2 1.1 0.4 1;0.3 0 0.3 1"/>
+                <g><animateTransform attributeName="transform" type="translate" values="0 0;0 -4;0 0" dur="2.9s" begin="0.98s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+                  <rect width="48" height="48" rx="12" fill="url(#tileGrad)"/></g>
+              </g>
+            </g>
+          </g>
+          <g transform="translate(120,0)">
+            <g opacity="0">
+              <animate attributeName="opacity" values="0;1" dur="0.34s" begin="0.21s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.6;1.07;1" keyTimes="0;0.62;1" dur="0.5s" begin="0.21s" fill="freeze"
+                                  calcMode="spline" keySplines="0.2 1.1 0.4 1;0.3 0 0.3 1"/>
+                <g><animateTransform attributeName="transform" type="translate" values="0 0;0 -4;0 0" dur="2.9s" begin="1.06s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+                  <rect width="48" height="48" rx="12" fill="url(#tileGrad)"/></g>
+              </g>
+            </g>
+          </g>
+          <g transform="translate(180,0)">
+            <g opacity="0">
+              <animate attributeName="opacity" values="0;1" dur="0.34s" begin="0.265s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.6;1.07;1" keyTimes="0;0.62;1" dur="0.5s" begin="0.265s" fill="freeze"
+                                  calcMode="spline" keySplines="0.2 1.1 0.4 1;0.3 0 0.3 1"/>
+                <g><animateTransform attributeName="transform" type="translate" values="0 0;0 -4;0 0" dur="2.9s" begin="1.14s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+                  <rect width="48" height="48" rx="12" fill="url(#tileGrad)"/></g>
+              </g>
+            </g>
+          </g>
+
+          <!-- ── row 1 ─────────────────────────────────────────────────────── -->
+          <g transform="translate(0,60)">
+            <g opacity="0">
+              <animate attributeName="opacity" values="0;1" dur="0.34s" begin="0.155s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.6;1.07;1" keyTimes="0;0.62;1" dur="0.5s" begin="0.155s" fill="freeze"
+                                  calcMode="spline" keySplines="0.2 1.1 0.4 1;0.3 0 0.3 1"/>
+                <g><animateTransform attributeName="transform" type="translate" values="0 0;0 -4;0 0" dur="2.9s" begin="0.98s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+                  <rect width="48" height="48" rx="12" fill="url(#tileGrad)"/></g>
+              </g>
+            </g>
+          </g>
+          <g transform="translate(60,60)">
+            <g opacity="0">
+              <animate attributeName="opacity" values="0;1" dur="0.34s" begin="0.21s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.6;1.07;1" keyTimes="0;0.62;1" dur="0.5s" begin="0.21s" fill="freeze"
+                                  calcMode="spline" keySplines="0.2 1.1 0.4 1;0.3 0 0.3 1"/>
+                <g><animateTransform attributeName="transform" type="translate" values="0 0;0 -4;0 0" dur="2.9s" begin="1.06s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+                  <rect width="48" height="48" rx="12" fill="url(#tileGrad)"/></g>
+              </g>
+            </g>
+          </g>
+          <g transform="translate(120,60)">
+            <g opacity="0">
+              <animate attributeName="opacity" values="0;1" dur="0.34s" begin="0.265s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.6;1.07;1" keyTimes="0;0.62;1" dur="0.5s" begin="0.265s" fill="freeze"
+                                  calcMode="spline" keySplines="0.2 1.1 0.4 1;0.3 0 0.3 1"/>
+                <g><animateTransform attributeName="transform" type="translate" values="0 0;0 -4;0 0" dur="2.9s" begin="1.14s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+                  <rect width="48" height="48" rx="12" fill="url(#tileGrad)"/></g>
+              </g>
+            </g>
+          </g>
+          <g transform="translate(180,60)">
+            <g opacity="0">
+              <animate attributeName="opacity" values="0;1" dur="0.34s" begin="0.32s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.6;1.07;1" keyTimes="0;0.62;1" dur="0.5s" begin="0.32s" fill="freeze"
+                                  calcMode="spline" keySplines="0.2 1.1 0.4 1;0.3 0 0.3 1"/>
+                <g><animateTransform attributeName="transform" type="translate" values="0 0;0 -4;0 0" dur="2.9s" begin="1.22s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+                  <rect width="48" height="48" rx="12" fill="url(#tileGrad)"/></g>
+              </g>
+            </g>
+          </g>
+
+          <!-- ── row 2 — last tile is the teal focal accent ─────────────────── -->
+          <g transform="translate(0,120)">
+            <g opacity="0">
+              <animate attributeName="opacity" values="0;1" dur="0.34s" begin="0.21s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.6;1.07;1" keyTimes="0;0.62;1" dur="0.5s" begin="0.21s" fill="freeze"
+                                  calcMode="spline" keySplines="0.2 1.1 0.4 1;0.3 0 0.3 1"/>
+                <g><animateTransform attributeName="transform" type="translate" values="0 0;0 -4;0 0" dur="2.9s" begin="1.06s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+                  <rect width="48" height="48" rx="12" fill="url(#tileGrad)"/></g>
+              </g>
+            </g>
+          </g>
+          <g transform="translate(60,120)">
+            <g opacity="0">
+              <animate attributeName="opacity" values="0;1" dur="0.34s" begin="0.265s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.6;1.07;1" keyTimes="0;0.62;1" dur="0.5s" begin="0.265s" fill="freeze"
+                                  calcMode="spline" keySplines="0.2 1.1 0.4 1;0.3 0 0.3 1"/>
+                <g><animateTransform attributeName="transform" type="translate" values="0 0;0 -4;0 0" dur="2.9s" begin="1.14s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+                  <rect width="48" height="48" rx="12" fill="url(#tileGrad)"/></g>
+              </g>
+            </g>
+          </g>
+          <g transform="translate(120,120)">
+            <g opacity="0">
+              <animate attributeName="opacity" values="0;1" dur="0.34s" begin="0.32s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.6;1.07;1" keyTimes="0;0.62;1" dur="0.5s" begin="0.32s" fill="freeze"
+                                  calcMode="spline" keySplines="0.2 1.1 0.4 1;0.3 0 0.3 1"/>
+                <g><animateTransform attributeName="transform" type="translate" values="0 0;0 -4;0 0" dur="2.9s" begin="1.22s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+                  <rect width="48" height="48" rx="12" fill="url(#tileGrad)"/></g>
+              </g>
+            </g>
+          </g>
+          <g transform="translate(180,120)">
+            <g opacity="0">
+              <animate attributeName="opacity" values="0;1" dur="0.34s" begin="0.375s" fill="freeze"/>
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="0.6;1.24;1" keyTimes="0;0.62;1" dur="0.52s" begin="0.375s" fill="freeze"
+                                  calcMode="spline" keySplines="0.2 1.1 0.4 1;0.3 0 0.3 1"/>
+                <g><animateTransform attributeName="transform" type="translate" values="0 0;0 -5;0 0" dur="2.5s" begin="1.2s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+                  <rect width="48" height="48" rx="12" fill="#4EC5B5"/></g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </svg>
+    </template>
+
+
+  </section>
+
+  <section id="verified">
+    <h2>What was actually verified</h2>
+    <div class="grid2">
+      <div class="panel">
+        <h3>Every frame was inspected, not assumed</h3>
+        <p>The kit ships a filmstrip harness that drives the real timeline
+          (<code>pauseAnimations()</code> + <code>setCurrentTime(t)</code>) and renders each template at
+          six or seven points so the motion can be reviewed frame by frame instead of guessed from the
+          markup.</p>
+        <p>That is how three bugs got caught: the bloom petals rendered fully visible at
+          <code>t=0</code> because a <code>begin</code>-delayed opacity animation leaves the element at
+          its <em>static</em> value first; the loader's leading arc was 25% too long; and the badge ping
+          faded before it read.</p>
+      </div>
+      <div class="panel">
+        <h3>The linter knows the failure modes</h3>
+        <p><code>tools/validate.py</code> runs 42 checks: <code>values</code> ↔
+          <code>keyTimes</code> ↔ <code>keySplines</code> counts, monotonic keyTimes, parseable
+          begin/dur, <code>url(#…)</code> resolution, dash lengths against <em>real</em>
+          <code>getTotalLength()</code>, and the static-baseline lint that catches the flash-before-first-keyframe
+          class of bug.</p>
+        <p>It also caught two defects in this very kit — a dashed stroke longer than its path, and an
+          over-strict rule of its own (SMIL keyTimes may legally end below 1; the final value simply
+          holds).</p>
+      </div>
+    </div>
+    <div class="terminal" style="margin-top:18px">
+      <div class="cmd">$ python3 tools/validate.py</div>
+      <div class="dim">=== geometry (real path lengths) ===</div>
+      <div>  01-bloom-logo-reveal.svg: &lt;circle&gt; dasharray 100.00 == pathLength=100 <span class="ok">— clean draw-on</span></div>
+      <div>  02-orbit-loader.svg: &lt;circle&gt; dasharray 44.30 covers 44.3% of pathLength=100 (159.5deg)</div>
+      <div>  03-success-check.svg: &lt;path&gt; dasharray 100.00 == pathLength=100 <span class="ok">— clean draw-on</span></div>
+      <div class="dim">────────────────────────────────────────────────</div>
+      <div>failures: 0   warnings: 0   notes: 42</div>
+      <div class="ok">all structural checks passed</div>
+    </div>
+    <div class="terminal" style="margin-top:12px">
+      <div class="cmd">$ python3 tools/filmstrip.py</div>
+      <div class="dim">→ preview-checks/*.png — every template sampled across its own timeline</div>
+    </div>
+  </section>
+
+  <section id="files">
+    <h2>What's in the kit</h2>
+    <div class="tree">
+svgator-template-project/<br>
+├── <b>index.html</b>                        <i>← this page; gallery + live playground, self-contained</i><br>
+├── <b>README.md</b>                         <i>← connect + import guide, the timing model, per-template notes</i><br>
+├── templates/<br>
+│   ├── 01-bloom-logo-reveal.svg       <i>7.2 KB · entrance</i><br>
+│   ├── 02-orbit-loader.svg            <i>1.8 KB · ambient loop</i><br>
+│   ├── 03-success-check.svg           <i>2.6 KB · state feedback</i><br>
+│   ├── 04-bell-notify.svg             <i>3.7 KB · micro-interaction</i><br>
+│   ├── 05-stagger-grid.svg            <i>10.2 KB · choreography reference</i><br>
+│   ├── svgator-project.01-bloom.json  <i>SVGator-shaped project JSON</i><br>
+│   └── svgator-project.02-orbit-loader.json<br>
+├── docs/<br>
+│   ├── mapping.md                     <i>SVG construct → project-JSON node/animator</i><br>
+│   ├── challenge-brief.md             <i>challenge guidelines + review ritual</i><br>
+│   └── export-settings.md             <i>per-pattern trigger / iteration / format matrix</i><br>
+├── tools/<br>
+│   ├── validate.py                    <i>42 structural + geometry checks</i><br>
+│   ├── filmstrip.py                   <i>renders each template across its timeline</i><br>
+│   └── build_project_json.py          <i>regenerates the project JSON from a data model</i><br>
+└── preview-checks/                    <i>the reviewed frames</i><br>
+    </div>
+  </section>
+
+  <footer>
+    Built as a template kit, not a live MCP session — the server could not be reached from here, so the
+    honest scope is: finished, verified animated SVGs plus SVGator-shaped project JSON you can land
+    yourself. Template names, triggers and iteration counts are tuned for the SVGator export model;
+    every colour, duration and stagger on this page is a live control.
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var EASES = {
+    default:  null,
+    linear:   "0 0 1 1",
+    calm:     "0.16 1 0.3 1",
+    playful:  "0.34 1.56 0.64 1",
+    snap:     "0.9 0 0.1 1"
+  };
+
+  function parseTime(v) {
+    if (v === null) return null;
+    var m = /^(-?\d*\.?\d+)(ms|s)?$/.exec(v.trim());
+    if (!m) return null;
+    var n = parseFloat(m[1]);
+    return m[2] === "ms" ? n / 1000 : n;
+  }
+  function fmtTime(v) { return v.toFixed(4).replace(/0+$/, "").replace(/\.$/, "") + "s"; }
+
+  /* lighten (amt>0) / darken (amt<0) a hex colour */
+  function shade(hex, amt) {
+    var m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (!m) return hex;
+    var out = [1, 2, 3].map(function (i) {
+      var c = parseInt(m[i], 16);
+      c = amt >= 0 ? c + (255 - c) * amt : c * (1 + amt);
+      return Math.max(0, Math.min(255, Math.round(c)));
+    });
+    return "#" + out.map(function (c) { return ("0" + c.toString(16)).slice(-2); }).join("");
+  }
+  function luminance(hex) {
+    var m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (!m) return 0;
+    return (0.2126 * parseInt(m[1], 16) + 0.7152 * parseInt(m[2], 16) + 0.0722 * parseInt(m[3], 16)) / 255;
+  }
+
+  var palette = { primary: "#FF5D2E", secondary: "#4EC5B5", bg: "#17130F" };
+  var reduced = false;
+
+  function colourMap(p) {
+    // brand hexes in the templates -> live palette
+    return [
+      ["#E8451B", shade(p.primary, -0.16)],   // gradient end / deep
+      ["#FF5D2E", p.primary],                 // brand mid
+      ["#FF8A4C", shade(p.primary, 0.28)],    // gradient start / light
+      ["#7FE3D6", shade(p.secondary, 0.22)],  // ping highlight
+      ["#4EC5B5", p.secondary],               // accent
+      ["#17130F", p.bg]                       // "cut-out" ring strokes follow the canvas
+    ];
+  }
+
+  function recolour(svg, p) {
+    var map = colourMap(p);
+    var all = svg.querySelectorAll("*");
+    var i, j, el, attrs, k, val, m, v;
+    for (i = 0; i < all.length; i++) {
+      el = all[i];
+      attrs = el.attributes;
+      for (k = 0; k < attrs.length; k++) {
+        if (!attrs[k] || attrs[k].name.indexOf("on") === 0) continue;
+        val = attrs[k].value;
+        if (typeof val !== "string" || val.indexOf("#") === -1) continue;
+        v = val;
+        for (j = 0; j < map.length; j++) {
+          v = v.split(map[j][0]).join(map[j][1]);
+          v = v.split(map[j][0].toLowerCase()).join(map[j][1]);
+        }
+        if (v !== val) attrs[k].value = v;
+      }
+    }
+  }
+
+  function applyTiming(svg, card) {
+    var speed = parseFloat(card.querySelector(".ctl-speed").value) || 1;
+    var delay = parseFloat(card.querySelector(".ctl-delay").value) || 1;
+    var ease = card.querySelector(".ctl-ease").value;
+
+    var anims = svg.querySelectorAll("animate, animateTransform");
+    for (var i = 0; i < anims.length; i++) {
+      var a = anims[i];
+      var looping = a.getAttribute("repeatCount") === "indefinite";
+
+      var dur = parseTime(a.getAttribute("dur"));
+      if (dur !== null) a.setAttribute("dur", fmtTime(dur / speed));
+
+      var begin = parseTime(a.getAttribute("begin"));
+      if (begin !== null && begin > 0) {
+        // one-shots stretch with speed so the whole timeline stays proportional;
+        // loops keep their phase and only change their own period
+        a.setAttribute("begin", fmtTime(begin * delay * (looping ? 1 : 1 / speed)));
+      }
+
+      if (ease !== "default" && a.hasAttribute("keySplines")) {
+        var n = a.getAttribute("keySplines").split(";").length;
+        var fill = [];
+        for (var s = 0; s < n; s++) fill.push(EASES[ease]);
+        a.setAttribute("keySplines", fill.join(";"));
+      }
+    }
+  }
+
+  function build(card, keepPlayhead) {
+    var tpl = document.getElementById(card.dataset.tpl);
+    if (!tpl) return null;
+
+    var old = card.querySelector(".stage svg");
+    var wasPaused = old && old.animationsPaused && old.animationsPaused();
+    var at = old ? old.getCurrentTime() : 0;
+
+    var svg = tpl.content.firstElementChild.cloneNode(true);
+    recolour(svg, palette);
+    applyTiming(svg, card);
+    card.querySelector(".stage").replaceChildren(svg);
+
+    var speed = parseFloat(card.querySelector(".ctl-speed").value) || 1;
+    var authored = parseFloat(card.dataset.duration);
+    var scrub = card.querySelector(".ctl-scrub");
+    var clock = card.querySelector(".clock");
+    scrub.max = (authored / speed).toFixed(2);
+    scrub.step = "0.01";
+
+    var pause = reduced;
+    card.querySelector(".stage").style.setProperty("--tpl-bg", palette.bg);
+    card.querySelector(".stage").style.setProperty(
+      "--tpl-ink", luminance(palette.bg) > 0.6 ? "#17130F" : "#F4EDE4");
+
+    if (pause) {
+      svg.pauseAnimations();
+      svg.setCurrentTime(parseFloat(card.dataset.settle));
+      scrub.value = Math.min(parseFloat(scrub.max), parseFloat(card.dataset.settle));
+      clock.textContent = (+scrub.value).toFixed(2) + "s";
+    } else if (keepPlayhead && wasPaused) {
+      svg.pauseAnimations();
+      svg.setCurrentTime(Math.min(at, parseFloat(scrub.max)));
+    } else {
+      scrub.value = 0;
+      clock.textContent = "0.00s";
+    }
+    card.querySelector(".ctl-play").textContent = pause ? "Play" : "Freeze";
+    return svg;
+  }
+
+  function wire(card) {
+    card.querySelector(".ctl-play").addEventListener("click", function () {
+      var svg = card.querySelector(".stage svg");
+      if (!svg) return;
+      if (svg.animationsPaused()) {
+        reduced = false;
+        document.getElementById("reduced").checked = false;
+        svg.unpauseAnimations();
+        this.textContent = "Freeze";
+      } else {
+        svg.pauseAnimations();
+        this.textContent = "Play";
+      }
+    });
+
+    card.querySelector(".ctl-replay").addEventListener("click", function () {
+      reduced = false;
+      document.getElementById("reduced").checked = false;
+      build(card, false);                       // fresh clone -> SMIL clock restarts at 0
+    });
+
+    card.querySelector(".ctl-scrub").addEventListener("input", function () {
+      var svg = card.querySelector(".stage svg");
+      if (!svg) return;
+      svg.pauseAnimations();
+      svg.setCurrentTime(parseFloat(this.value));
+      card.querySelector(".clock").textContent = (+this.value).toFixed(2) + "s";
+      card.querySelector(".ctl-play").textContent = "Play";
+    });
+
+    [".ctl-speed", ".ctl-delay", ".ctl-ease"].forEach(function (sel) {
+      card.querySelector(sel).addEventListener("change", function () {
+        build(card, true);
+      });
+    });
+  }
+
+  var cards = Array.prototype.slice.call(document.querySelectorAll(".card"));
+
+  document.getElementById("reduced").addEventListener("change", function () {
+    reduced = this.checked;
+    cards.forEach(function (c) { build(c, false); });
+  });
+  document.getElementById("reset").addEventListener("click", function () {
+    palette = { primary: "#FF5D2E", secondary: "#4EC5B5", bg: "#17130F" };
+    document.getElementById("pal-primary").value = palette.primary;
+    document.getElementById("pal-secondary").value = palette.secondary;
+    document.getElementById("pal-bg").value = palette.bg;
+    reduced = false;
+    document.getElementById("reduced").checked = false;
+    cards.forEach(function (c) { build(c, false); });
+  });
+
+  [["pal-primary", "primary"], ["pal-secondary", "secondary"], ["pal-bg", "bg"]].forEach(function (p) {
+    document.getElementById(p[0]).addEventListener("input", function () {
+      palette[p[1]] = this.value;
+      cards.forEach(function (c) { build(c, true); });
+    });
+  });
+
+  // respect the OS preference on first load
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    reduced = true;
+    document.getElementById("reduced").checked = true;
+  }
+
+  cards.forEach(function (c) { wire(c); build(c, false); });
+})();
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a49c1717ef66b7dc',t:'MTc5MTg3MDg3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
